@@ -2180,34 +2180,34 @@ Analiza la imagen y responde UNICAMENTE con un JSON exacto:
       setPublishing(false);
     }
   }
-    setPublishing(true);
-    setTimeout(()=>{
-      const newPick = {
-        id: Date.now(),
-        tipster: user?.name||"ManuPicks",
-        roi: user?.roi||"+225%",
-        verified: true,
-        league: league?.name||"Liga",
-        sport: league?.sport||"⚽",
-        flag: league?.flag||"🌍",
-        match: match?`${match.home} vs ${match.away}`:"Partido",
-        time: match?.time||"Hoy",
-        odds: parseFloat(odds)||1.90,
-        bank: parseInt(bank)||10,
-        price: parseInt(price)||10,
-        locked: true,
-        ticketImg: imgSrc || null,
-      };
-      if(addPick) addPick(newPick);
-      // Increment daily counter
-      const today2 = new Date().toDateString();
-      const todayKey2 = "tpz_picks_today_" + today2;
-      const count = parseInt(localStorage.getItem(todayKey2) || "0");
-      try { localStorage.setItem(todayKey2, String(count + 1)); } catch(e) {}
-      setPublishing(false);
-      setScreen("published");
-    }, 2000);
-  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   function reset() {
     setScreen("dashboard");setLeague(null);setMatch(null);
