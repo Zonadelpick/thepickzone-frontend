@@ -2579,14 +2579,22 @@ Analiza la imagen y responde UNICAMENTE con un JSON exacto:
       if(r.ok){
         const data = await r.json();
         if(Array.isArray(data) && data.length > 0){
+          const toLocal = iso => {
+            try {
+              const d = new Date(iso);
+              const days = ["Dom","Lun","Mar","Mie","Jue","Vie","Sab"];
+              const months = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+              return days[d.getDay()]+" "+d.getDate()+" "+months[d.getMonth()]+" - "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+            } catch(e){ return iso; }
+          };
           const matches = data.map(m=>({
             id: m.id,
             home: m.home,
             away: m.away,
-            time: m.time,
+            time: toLocal(m.time),
             venue: ""
           })).filter(m=>!isMatchStarted(m.time));
-          setLiveMatches(matches.length > 0 ? matches : data.map(m=>({id:m.id,home:m.home,away:m.away,time:m.time,venue:""})));
+          setLiveMatches(matches.length > 0 ? matches : data.map(m=>({id:m.id,home:m.home,away:m.away,time:toLocal(m.time),venue:""})));
           setLoadingMatches(false);
           return;
         }
