@@ -2139,15 +2139,47 @@ Analiza la imagen y responde UNICAMENTE con un JSON exacto:
     setAnalyzingResult(false);
   }
 
-  function doPublish() {
-    // Check 3 picks/day limit
+  async function doPublish() {
     const today = new Date().toDateString();
-    const todayKey = "tpz_picks_today_" + today;
-    const todayCount = parseInt(localStorage.getItem(todayKey) || "0");
-    if (todayCount >= 3) {
-      alert("Has alcanzado el límite de 3 picks por día. Vuelve mañana.");
-      return;
+    const todayKey = 'tpz_picks_today_' + today;
+    const todayCount = parseInt(localStorage.getItem(todayKey) || '0');
+    if (todayCount >= 3) { alert('Limite de 3 picks por dia alcanzado.'); return; }
+    setPublishing(true);
+    try {
+      const token = localStorage.getItem('tpz_token');
+      const newPick = {
+        tipster: user?.name||'Tipster',
+        tipsterId: user?._id||user?.id,
+        roi: user?.roi||'+0%',
+        verified: true,
+        league: league?.name||'Liga',
+        sport: league?.sport||'',
+        flag: league?.flag||'',
+        match: match ? match.home+' vs '+match.away : 'Partido',
+        time: match?.time||'Hoy',
+        odds: parseFloat(odds)||1.90,
+        bank: parseInt(bank)||10,
+        price: parseInt(price)||10,
+        locked: true,
+        ticketImg: imgSrc || null,
+      };
+      const r = await fetch(BACKEND_URL+'/api/picks', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json','Authorization':'Bearer '+token},
+        body: JSON.stringify(newPick)
+      });
+      const saved = await r.json();
+      if(!r.ok){ alert(saved.error||'Error publicando pick'); setPublishing(false); return; }
+      if(addPick) addPick({...newPick, ...saved, id: saved._id});
+      const count = parseInt(localStorage.getItem(todayKey) || '0');
+      try { localStorage.setItem(todayKey, String(count + 1)); } catch(e) {}
+      setPublishing(false);
+      setScreen('published');
+    } catch(e){
+      alert('Error de conexion al publicar pick');
+      setPublishing(false);
     }
+  }
     setPublishing(true);
     setTimeout(()=>{
       const newPick = {
