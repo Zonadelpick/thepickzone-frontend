@@ -2574,6 +2574,26 @@ Analiza la imagen y responde UNICAMENTE con un JSON exacto:
     setLoadingMatches(true);
     setLiveMatches(null);
     try {
+      // Use Odds API via backend
+      const r = await fetch(BACKEND_URL+"/api/fixtures/odds?league="+encodeURIComponent(leagueObj.name));
+      if(r.ok){
+        const data = await r.json();
+        if(Array.isArray(data) && data.length > 0){
+          const matches = data.map(m=>({
+            id: m.id,
+            home: m.home,
+            away: m.away,
+            time: m.time,
+            venue: ""
+          })).filter(m=>!isMatchStarted(m.time));
+          setLiveMatches(matches.length > 0 ? matches : data.map(m=>({id:m.id,home:m.home,away:m.away,time:m.time,venue:""})));
+          setLoadingMatches(false);
+          return;
+        }
+      }
+    } catch(e){ console.error("Odds API error:", e); }
+    // Fallback to Claude
+    try {
       const today = new Date();
       const dateStr = today.toLocaleDateString("es-MX", {
         weekday:"long", year:"numeric", month:"long", day:"numeric"
