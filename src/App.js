@@ -1664,7 +1664,12 @@ function HomeView({ setView, setPurchaseTarget, picks, setSelectedTipster }) {
             <button onClick={()=>setView("marketplace")} style={{background:"var(--g)",color:"#000",border:"2px solid var(--g)",padding:"15px 36px",borderRadius:6,fontFamily:"'Barlow Condensed'",fontSize:"1rem",fontWeight:900,letterSpacing:2,cursor:"pointer"}}>VER TODOS LOS PICKS</button>
           </div>
           <div style={{display:"flex",gap:16,marginTop:48,flexWrap:"wrap"}}>
-            {[["68%","Win Rate"],[picks.length+"+","Picks activos"],[topTipsters.length+"+","Tipsters Pro"]].map(([v,l])=>(
+            {(()=>{
+    const resolved = picks.filter(p=>p.result==="won"||p.result==="lost");
+    const won = picks.filter(p=>p.result==="won").length;
+    const winRate = resolved.length>0 ? Math.round((won/resolved.length)*100) : 0;
+    return [[winRate+"%","Win Rate"],[picks.length+"+","Picks activos"],[topTipsters.length+"+","Tipsters Pro"]];
+  })().map(([v,l])=>(
               <div key={l} style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:"18px 22px",textAlign:"center",minWidth:110}}>
                 <div style={{fontFamily:"'Bebas Neue'",fontSize:"2.4rem",color:"var(--g)",lineHeight:1,textShadow:"0 0 20px rgba(29,185,84,0.4)"}}>{v}</div>
                 <div style={{fontSize:"0.7rem",color:"var(--text-dim)",letterSpacing:2,marginTop:4,fontWeight:600}}>{l}</div>
