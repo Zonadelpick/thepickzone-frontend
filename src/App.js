@@ -499,8 +499,7 @@ const MATCHES = {
     {id:2, home:"Gamba Osaka",         away:"Urawa Red Diamonds",  time:"Dom 3 May - 15:00 JST",    venue:"Panasonic Stadium"},
   ],
 };
-const INITIAL_PICKS = [];
-const INITIAL_PICKS_OLD = [
+const INITIAL_PICKS = [
   {id:1,tipster:"ManuPicks",roi:"+225%",verified:true,league:"Liga de España",sport:"⚽",flag:"🇪🇸",match:"Real Madrid vs Atletico de Madrid",time:"Sab 3 May - 16:15",odds:4.75,bank:10,price:10,locked:true},
   {id:2,tipster:"BetKing",roi:"+180%",verified:true,league:"NBA",sport:"🏀",flag:"🇺🇸",match:"Celtics vs Miami Heat",time:"Hoy - 19:30 ET",odds:1.90,bank:8,price:8,locked:true},
   {id:3,tipster:"ZonePro",roi:"+142%",verified:true,league:"Champions League",sport:"⚽",flag:"🌍",match:"PSG vs Bayern Munich",time:"Mar 28 Abr - 21:00",odds:2.30,bank:5,price:12,locked:true},
@@ -1289,13 +1288,6 @@ function SearchView({ setView, setPurchaseTarget, picks }) {
 // ── RANKINGS VIEW ─────────────────────────────────────────────────────────────
 function RankingsView({ setView, picks, setSelectedTipster }) {
 
-  const [backendTipsters, setBackendTipsters] = useState([]);
-  useEffect(()=>{
-    fetch(BACKEND_URL+'/api/tipsters')
-      .then(r=>r.json())
-      .then(data=>{ if(Array.isArray(data)) setBackendTipsters(data); })
-      .catch(()=>{});
-  },[]);
   const [sortBy, setSortBy] = useState("roi");
 
   // Build tipster stats from picks
@@ -1324,21 +1316,12 @@ function RankingsView({ setView, picks, setSelectedTipster }) {
     if (!p.price||p.price===0) t.freePicks++; else t.paidPicks++;
   });
 
-  // Add mock tipsters if not enough real ones
+  backendTipsters.forEach(bt=>{if(!tipsterMap[bt.name]){tipsterMap[bt.name]={name:bt.name,roi:bt.roi||"+0%",avatar:bt.avatar||null,verified:true,picks:bt.totalPicks||0,won:bt.won||0,lost:bt.lost||0,pending:0,totalSales:0,sports:new Set(),leagues:new Set()};}else{tipsterMap[bt.name].roi=bt.roi||tipsterMap[bt.name].roi;}});
+  // No mock tipsters
 
-  // Merge backend tipsters with local pick data
-  backendTipsters.forEach(bt => {
-    if(!tipsterMap[bt.name]) {
-      tipsterMap[bt.name] = {
-        name: bt.name, roi: bt.roi||"+0%", avatar: bt.avatar||null,
-        verified: true, picks: bt.totalPicks||0, won: bt.won||0,
-        lost: bt.lost||0, pending: 0, totalSales: 0,
-        sports: new Set(), leagues: new Set(),
-      };
-    } else {
-      tipsterMap[bt.name].roi = bt.roi||tipsterMap[bt.name].roi;
-    }
-  });
+
+
+
   const tipsters = Object.values(tipsterMap).map(t => ({
     ...t,
     winRate: t.won+t.lost > 0 ? Math.round((t.won/(t.won+t.lost))*100) : 0,
@@ -1664,12 +1647,7 @@ function HomeView({ setView, setPurchaseTarget, picks, setSelectedTipster }) {
             <button onClick={()=>setView("marketplace")} style={{background:"var(--g)",color:"#000",border:"2px solid var(--g)",padding:"15px 36px",borderRadius:6,fontFamily:"'Barlow Condensed'",fontSize:"1rem",fontWeight:900,letterSpacing:2,cursor:"pointer"}}>VER TODOS LOS PICKS</button>
           </div>
           <div style={{display:"flex",gap:16,marginTop:48,flexWrap:"wrap"}}>
-            {(()=>{
-    const resolved = picks.filter(p=>p.result==="won"||p.result==="lost");
-    const won = picks.filter(p=>p.result==="won").length;
-    const winRate = resolved.length>0 ? Math.round((won/resolved.length)*100) : 0;
-    return [[winRate+"%","Win Rate"],[picks.length+"+","Picks activos"],[topTipsters.length+"+","Tipsters Pro"]];
-  })().map(([v,l])=>(
+            {[["68%","Win Rate"],[picks.length+"+","Picks activos"],[topTipsters.length+"+","Tipsters Pro"]].map(([v,l])=>(
               <div key={l} style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:"18px 22px",textAlign:"center",minWidth:110}}>
                 <div style={{fontFamily:"'Bebas Neue'",fontSize:"2.4rem",color:"var(--g)",lineHeight:1,textShadow:"0 0 20px rgba(29,185,84,0.4)"}}>{v}</div>
                 <div style={{fontSize:"0.7rem",color:"var(--text-dim)",letterSpacing:2,marginTop:4,fontWeight:600}}>{l}</div>
@@ -2139,75 +2117,43 @@ Analiza la imagen y responde UNICAMENTE con un JSON exacto:
     setAnalyzingResult(false);
   }
 
-  async function doPublish() {
+  function doPublish() {
+    // Check 3 picks/day limit
     const today = new Date().toDateString();
-    const todayKey = 'tpz_picks_today_' + today;
-    const todayCount = parseInt(localStorage.getItem(todayKey) || '0');
-    if (todayCount >= 3) { alert('Limite de 3 picks por dia alcanzado.'); return; }
+    const todayKey = "tpz_picks_today_" + today;
+    const todayCount = parseInt(localStorage.getItem(todayKey) || "0");
+    if (todayCount >= 3) {
+      alert("Has alcanzado el límite de 3 picks por día. Vuelve mañana.");
+      return;
+    }
     setPublishing(true);
-    try {
-      const token = localStorage.getItem('tpz_token');
+    setTimeout(()=>{
       const newPick = {
-        tipster: user?.name||'Tipster',
-        tipsterId: user?._id||user?.id,
-        roi: user?.roi||'+0%',
+        id: Date.now(),
+        tipster: user?.name||"ManuPicks",
+        roi: user?.roi||"+225%",
         verified: true,
-        league: league?.name||'Liga',
-        sport: league?.sport||'',
-        flag: league?.flag||'',
-        match: match ? match.home+' vs '+match.away : 'Partido',
-        time: match?.time||'Hoy',
+        league: league?.name||"Liga",
+        sport: league?.sport||"⚽",
+        flag: league?.flag||"🌍",
+        match: match?`${match.home} vs ${match.away}`:"Partido",
+        time: match?.time||"Hoy",
         odds: parseFloat(odds)||1.90,
         bank: parseInt(bank)||10,
         price: parseInt(price)||10,
         locked: true,
         ticketImg: imgSrc || null,
       };
-      const r = await fetch(BACKEND_URL+'/api/picks', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json','Authorization':'Bearer '+token},
-        body: JSON.stringify(newPick)
-      });
-      const saved = await r.json();
-      if(!r.ok){ alert(saved.error||'Error publicando pick'); setPublishing(false); return; }
-      if(addPick) addPick({...newPick, ...saved, id: saved._id});
-      const count = parseInt(localStorage.getItem(todayKey) || '0');
-      try { localStorage.setItem(todayKey, String(count + 1)); } catch(e) {}
+      if(addPick) addPick(newPick);
+      // Increment daily counter
+      const today2 = new Date().toDateString();
+      const todayKey2 = "tpz_picks_today_" + today2;
+      const count = parseInt(localStorage.getItem(todayKey2) || "0");
+      try { localStorage.setItem(todayKey2, String(count + 1)); } catch(e) {}
       setPublishing(false);
-      setScreen('published');
-    } catch(e){
-      alert('Error de conexion al publicar pick');
-      setPublishing(false);
-    }
+      setScreen("published");
+    }, 2000);
   }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
   function reset() {
     setScreen("dashboard");setLeague(null);setMatch(null);
@@ -2603,36 +2549,11 @@ Analiza la imagen y responde UNICAMENTE con un JSON exacto:
     setLoadingTeam(false);
   }
   async function fetchLiveMatches(leagueObj) {
-    setLoadingMatches(true);
-    setLiveMatches(null);
+    setLoadingMatches(true); setLiveMatches(null);
     try {
-      // Use Odds API via backend
-      const r = await fetch(BACKEND_URL+"/api/fixtures/odds?league="+encodeURIComponent(leagueObj.name));
-      if(r.ok){
-        const data = await r.json();
-        if(Array.isArray(data) && data.length > 0){
-          const toLocal = iso => {
-            try {
-              const d = new Date(iso);
-              const days = ["Dom","Lun","Mar","Mie","Jue","Vie","Sab"];
-              const months = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
-              return days[d.getDay()]+" "+d.getDate()+" "+months[d.getMonth()]+" - "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
-            } catch(e){ return iso; }
-          };
-          const matches = data.map(m=>({
-            id: m.id,
-            home: m.home,
-            away: m.away,
-            time: toLocal(m.time),
-            venue: ""
-          })).filter(m=>!isMatchStarted(m.time));
-          setLiveMatches(matches.length > 0 ? matches : data.map(m=>({id:m.id,home:m.home,away:m.away,time:toLocal(m.time),venue:""})));
-          setLoadingMatches(false);
-          return;
-        }
-      }
-    } catch(e){ console.error("Odds API error:", e); }
-    // Fallback to Claude
+      const r=await fetch(BACKEND_URL+"/api/fixtures/odds?league="+encodeURIComponent(leagueObj.name));
+      if(r.ok){const data=await r.json();if(Array.isArray(data)&&data.length>0){const tl=iso=>{try{const d=new Date(iso);const dy=["Dom","Lun","Mar","Mie","Jue","Vie","Sab"];const mo=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];return dy[d.getDay()]+" "+d.getDate()+" "+mo[d.getMonth()]+" - "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");}catch(e){return iso;}};const m=data.map(x=>({id:x.id,home:x.home,away:x.away,time:tl(x.time),venue:""})).filter(x=>!isMatchStarted(x.time));setLiveMatches(m.length>0?m:data.map(x=>({id:x.id,home:x.home,away:x.away,time:tl(x.time),venue:""})));setLoadingMatches(false);return;}}
+    }catch(e2){console.error("Odds:",e2);}
     try {
       const today = new Date();
       const dateStr = today.toLocaleDateString("es-MX", {
@@ -2744,42 +2665,42 @@ Analiza la imagen y responde UNICAMENTE con un JSON exacto:
     setAnalyzingResult(false);
   }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  function doPublish() {
+    // Check 3 picks/day limit
+    const today = new Date().toDateString();
+    const todayKey = "tpz_picks_today_" + today;
+    const todayCount = parseInt(localStorage.getItem(todayKey) || "0");
+    if (todayCount >= 3) {
+      alert("Has alcanzado el límite de 3 picks por día. Vuelve mañana.");
+      return;
+    }
+    setPublishing(true);
+    setTimeout(()=>{
+      const newPick = {
+        id: Date.now(),
+        tipster: user?.name||"ManuPicks",
+        roi: user?.roi||"+225%",
+        verified: true,
+        league: league?.name||"Liga",
+        sport: league?.sport||"⚽",
+        flag: league?.flag||"🌍",
+        match: match?`${match.home} vs ${match.away}`:"Partido",
+        time: match?.time||"Hoy",
+        odds: parseFloat(odds)||1.90,
+        bank: parseInt(bank)||10,
+        price: parseInt(price)||10,
+        locked: true,
+        ticketImg: imgSrc||null,
+      };
+      if(addPick) addPick(newPick);
+      // Increment daily counter
+      const today2 = new Date().toDateString();
+      const todayKey2 = "tpz_picks_today_" + today2;
+      const count = parseInt(localStorage.getItem(todayKey2) || "0");
+      try { localStorage.setItem(todayKey2, String(count + 1)); } catch(e) {}
+      setPublishing(false);
+      setScreen("published");
+    },2000);
   }
 
   function reset(){
@@ -3147,7 +3068,22 @@ Analiza la imagen y responde UNICAMENTE con un JSON exacto:
             )}
           </div>
           <div style={{padding:"0 10px 12px"}}>
-            <button onClick={doPublish} disabled={publishing} style={{width:"100%",background:publishing?"#aaa":"#1DB954",border:"none",color:"#fff",padding:"13px",borderRadius:8,fontWeight:700,fontSize:"0.9rem",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+            <button onClick={async()=>{
+    const today=new Date().toDateString();
+    const todayKey="tpz_picks_today_"+today;
+    if(parseInt(localStorage.getItem(todayKey)||"0")>=3){alert("Limite de 3 picks por dia");return;}
+    publishing||setPublishing(true);
+    try{
+      const token=localStorage.getItem("tpz_token");
+      const np={tipster:user?.name||"Tipster",tipsterId:user?._id||user?.id,roi:user?.roi||"+0%",verified:true,league:league?.name||"Liga",sport:league?.sport||"",flag:league?.flag||"",match:match?(match.home+" vs "+match.away):"Partido",time:match?.time||"Hoy",odds:parseFloat(odds)||1.90,bank:parseInt(bank)||10,price:parseInt(price)||10,locked:true,ticketImg:imgSrc||null};
+      const r=await fetch(BACKEND_URL+"/api/picks",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify(np)});
+      const saved=await r.json();
+      if(!r.ok){alert(saved.error||"Error publicando");setPublishing(false);return;}
+      if(addPick)addPick({...np,...saved,id:saved._id});
+      localStorage.setItem(todayKey,String(parseInt(localStorage.getItem(todayKey)||"0")+1));
+      setPublishing(false);setScreen("published");
+    }catch(e){alert("Error de conexion");setPublishing(false);}
+  }} disabled={publishing} style={{width:"100%",background:publishing?"#aaa":"#1DB954",border:"none",color:"#fff",padding:"13px",borderRadius:8,fontWeight:700,fontSize:"0.9rem",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
               {publishing?<><span style={{width:14,height:14,border:"2px solid #fff",borderTopColor:"transparent",borderRadius:"50%",animation:"spin 1s linear infinite",display:"inline-block"}}/>Publicando...</>:"✅ Publicar pick"}
             </button>
           </div>
@@ -3453,193 +3389,224 @@ function ResultsReview({ picks }) {
 
 
 // ── ADMIN PANEL ───────────────────────────────────────────────────────────────
-﻿function AdminPanel({ setView, user, picks }) {
-  const [tab, setTab] = useState('results');
-  const [adminStats, setAdminStats] = useState({ users:0, picks:0 });
-  const [adminUsers, setAdminUsers] = useState([]);
-  const [pendingPicks, setPendingPicks] = useState([]);
-  const [allPicks, setAllPicks] = useState([]);
-  const [payoutTipsters, setPayoutTipsters] = useState([]);
-  const [resetting, setResetting] = useState(false);
-  const loadData = () => {
-    const token = localStorage.getItem('tpz_token');
-    const h = { 'Authorization': 'Bearer ' + token };
-    fetch(BACKEND_URL+'/api/admin/stats', { headers: h }).then(r=>r.json()).then(d=>setAdminStats(d||{})).catch(()=>{});
-    fetch(BACKEND_URL+'/api/admin/users', { headers: h }).then(r=>r.json()).then(d=>{ if(Array.isArray(d)) setAdminUsers(d); }).catch(()=>{});
-    fetch(BACKEND_URL+'/api/admin/picks-pending', { headers: h }).then(r=>r.json()).then(d=>{ if(Array.isArray(d)) setPendingPicks(d); }).catch(()=>{});
-    fetch(BACKEND_URL+'/api/admin/picks-all', { headers: h }).then(r=>r.json()).then(d=>{
-      if(Array.isArray(d)){
-        setAllPicks(d);
-        fetch(BACKEND_URL+'/api/admin/users', { headers: h }).then(r=>r.json()).then(users=>{
-          const proUsers = Array.isArray(users) ? users.filter(u=>u.role==='pro') : [];
-          const tipsterData = proUsers.map(u=>{
-            const uPicks = d.filter(p=>String(p.tipsterId)===String(u._id));
-            const sales = uPicks.reduce((s,p)=>s+(p.buyers?.length||0)*parseFloat(p.price||0),0);
-            return { id:u._id, name:u.name, email:u.email, paypal:u.paypal||'', sales, commission:sales*0.1, picks:uPicks.length };
-          });
-          setPayoutTipsters(tipsterData);
-        });
-      }
-    }).catch(()=>{});
-  };
-  useEffect(()=>{ loadData(); },[]);
-  async function approveResult(pickId, result) {
-    const token = localStorage.getItem('tpz_token');
-    const r = await fetch(BACKEND_URL+'/api/picks/'+pickId+'/result',{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({result})});
-    if(r.ok){ alert('Resultado: '+result.toUpperCase()); setPendingPicks(prev=>prev.filter(p=>p._id!==pickId)); loadData(); }
-    else alert('Error al guardar');
-  }
-  async function reanalyze(pickId) {
-    const token = localStorage.getItem('tpz_token');
-    const r = await fetch(BACKEND_URL+'/api/picks/'+pickId+'/analyze',{method:'POST',headers:{'Authorization':'Bearer '+token}});
-    const data = await r.json();
-    if(r.ok){ alert('Dictamen: '+data.analysis.resultado); loadData(); }
-    else alert('Error: '+(data.error||'desconocido'));
-  }
-  async function resetStats() {
-    if(!window.confirm('Resetear todas las estadisticas?')) return;
-    setResetting(true);
-    const token = localStorage.getItem('tpz_token');
-    await fetch(BACKEND_URL+'/api/admin/reset-stats',{method:'POST',headers:{'Authorization':'Bearer '+token}});
-    setResetting(false);
-    alert('Stats reseteados');
-    loadData();
-  }
-  const tabStyle = (t) => ({background:tab===t?'var(--g)':'transparent',color:tab===t?'#000':'var(--muted)',border:'none',padding:'8px 18px',borderRadius:6,cursor:'pointer',fontSize:'0.78rem',fontWeight:700,letterSpacing:1,textTransform:'uppercase'});
-  const totalRevenue = payoutTipsters.reduce((s,t)=>s+t.sales,0);
-  const commission = totalRevenue*0.10;
+function AdminPanel({ setView, user, picks }) {
+  const [tab, setTab] = useState("payouts");
+
+  // Mock tipsters with their weekly earnings
+  const tipsters = [
+    { id:1, name:"ManuPicks",  email:"pro@thepickzone.com", paypal:"manu@paypal.com",  weekEarnings:245.00, totalEarnings:1820.00, picks:12, status:"pending" },
+    { id:2, name:"BetKing",    email:"betking@gmail.com",   paypal:"betking@paypal.com",weekEarnings:180.50, totalEarnings:940.00,  picks:8,  status:"pending" },
+    { id:3, name:"ZonePro",    email:"zonepro@gmail.com",   paypal:"zonepro@paypal.com",weekEarnings:95.00,  totalEarnings:520.00,  picks:5,  status:"approved" },
+  ];
+
+  const [payoutStatus, setPayoutStatus] = useState(
+    tipsters.reduce((acc,t) => ({...acc,[t.id]:t.status}), {})
+  );
+
+  const totalPending = tipsters.filter(t=>payoutStatus[t.id]==="pending").reduce((s,t)=>s+t.weekEarnings,0);
+  const totalUsers = 47;
+  const totalRevenue = tipsters.reduce((s,t)=>s+t.totalEarnings,0);
+  const commission = totalRevenue * 0.10;
+
+  const tabStyle = (t) => ({
+    background: tab===t ? "var(--g)" : "transparent",
+    color: tab===t ? "#000" : "var(--muted)",
+    border: "none", padding:"8px 18px", borderRadius:6,
+    cursor:"pointer", fontSize:"0.78rem", fontWeight:700,
+    letterSpacing:1, textTransform:"uppercase",
+  });
+
   return (
-    <div style={{paddingTop:80,minHeight:'100vh',padding:'clamp(80px,12vw,100px) 5% 60px'}}>
-      <div style={{maxWidth:700,margin:'0 auto'}}>
-        <div style={{marginBottom:28,display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:12}}>
-          <div>
-            <div style={{fontSize:'0.68rem',color:'var(--g)',letterSpacing:3,textTransform:'uppercase',fontWeight:700,marginBottom:8}}>Panel Administrador</div>
-            <h1 style={{fontFamily:"'Bebas Neue'",fontSize:'clamp(2rem,5vw,3rem)',letterSpacing:1}}>Bienvenido, <span style={{color:'var(--g)'}}>Admin</span></h1>
+    <div style={{paddingTop:80,minHeight:"100vh",padding:"clamp(80px,12vw,100px) 5% 60px"}}>
+      <div style={{maxWidth:700,margin:"0 auto"}}>
+
+        {/* Header */}
+        <div style={{marginBottom:28}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:12}}>
+            <div>
+              <div style={{fontSize:"0.68rem",color:"var(--g)",letterSpacing:3,textTransform:"uppercase",fontWeight:700,marginBottom:8}}>Panel Administrador</div>
+              <h1 style={{fontFamily:"'Bebas Neue'",fontSize:"clamp(2rem,5vw,3rem)",letterSpacing:1}}>
+                Bienvenido, <span style={{color:"var(--g)"}}>Admin</span> 👑
+              </h1>
+            </div>
+            <button onClick={()=>setView("revenue-dashboard")}
+              style={{background:"linear-gradient(135deg,rgba(29,185,84,0.15),rgba(29,185,84,0.05))",border:"1px solid rgba(29,185,84,0.3)",color:"var(--g)",padding:"10px 20px",borderRadius:8,cursor:"pointer",fontFamily:"'Barlow Condensed'",fontSize:"0.9rem",fontWeight:700,letterSpacing:1,display:"flex",alignItems:"center",gap:8}}>
+              💰 Revenue Dashboard
+            </button>
           </div>
-          <button onClick={()=>setView('revenue-dashboard')} style={{background:'rgba(29,185,84,0.1)',border:'1px solid rgba(29,185,84,0.3)',color:'var(--g)',padding:'10px 20px',borderRadius:8,cursor:'pointer',fontSize:'0.9rem',fontWeight:700}}>Revenue Dashboard</button>
         </div>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))',gap:12,marginBottom:24}}>
-          {[['Usuarios',String(adminUsers.length||0)],['Picks totales',String(allPicks.length||0)],['Revenue','$'+totalRevenue.toFixed(0)],['Comision','$'+commission.toFixed(0)],['Por aprobar',String(pendingPicks.length||0)]].map(([l,v])=>(
-            <div key={l} style={{background:'var(--d3)',border:'1px solid var(--border)',borderRadius:10,padding:'16px 12px',textAlign:'center'}}>
-              <div style={{fontFamily:"'Bebas Neue'",fontSize:'1.6rem',color:'var(--g)',lineHeight:1}}>{v}</div>
-              <div style={{fontSize:'0.62rem',color:'var(--muted)',letterSpacing:1,marginTop:3}}>{l}</div>
+
+        {/* Stats */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:12,marginBottom:24}}>
+          {[
+            ["👥","47","Usuarios"],
+            ["📊",picks.length.toString(),"Picks activos"],
+            ["💰","$"+totalRevenue.toFixed(0),"Revenue total"],
+            ["🏦","$"+commission.toFixed(0),"Comision (10%)"],
+            ["⏳","$"+totalPending.toFixed(0),"Por pagar"],
+          ].map(([ic,v,l])=>(
+            <div key={l} style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:"16px 12px",textAlign:"center"}}>
+              <div style={{fontSize:"1.3rem",marginBottom:6}}>{ic}</div>
+              <div style={{fontFamily:"'Bebas Neue'",fontSize:"1.6rem",color:"var(--g)",lineHeight:1}}>{v}</div>
+              <div style={{fontSize:"0.62rem",color:"var(--muted)",letterSpacing:1,marginTop:3}}>{l}</div>
             </div>
           ))}
         </div>
-        <div style={{display:'flex',gap:8,marginBottom:20,flexWrap:'wrap'}}>
-          {['results','history','payouts','users'].map(t=>(
+
+        {/* Tabs */}
+        <div style={{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap"}}>
+          {["results","payouts","users","picks"].map(t=>(
             <button key={t} onClick={()=>setTab(t)} style={tabStyle(t)}>
-              {t==='results'?'Resultados':t==='history'?'Historial':t==='payouts'?'Pagos':'Usuarios'}
+              {t==="results"?"✅ Resultados":t==="payouts"?"Pagos":t==="users"?"Usuarios":"Picks"}
             </button>
           ))}
         </div>
-        {tab==='results' && (
-          <div>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
-              <div style={{fontSize:'0.82rem',color:'var(--muted)'}}>{pendingPicks.length} picks pendientes</div>
-              <div style={{display:'flex',gap:8}}>
-                <button onClick={async()=>{const token=localStorage.getItem('tpz_token');await fetch(BACKEND_URL+'/api/admin/analyze-picks',{method:'POST',headers:{'Authorization':'Bearer '+token}});alert('Analisis iniciado');loadData();}} style={{background:'rgba(29,185,84,0.15)',border:'1px solid var(--g)',color:'var(--g)',padding:'6px 14px',borderRadius:6,cursor:'pointer',fontSize:'0.75rem',fontWeight:700}}>Analizar</button>
-                <button onClick={resetStats} disabled={resetting} style={{background:'rgba(244,67,54,0.15)',border:'1px solid #f44336',color:'#f44336',padding:'6px 14px',borderRadius:6,cursor:'pointer',fontSize:'0.75rem',fontWeight:700}}>{resetting?'...':'Reset Stats'}</button>
-              </div>
-            </div>
-            {pendingPicks.length===0 && <div style={{textAlign:'center',color:'var(--muted)',padding:40}}>No hay picks pendientes</div>}
-            {pendingPicks.map((p,i)=>(
-              <div key={p._id||i} style={{background:'var(--d3)',border:'1px solid var(--border)',borderRadius:10,padding:'16px',marginBottom:10}}>
-                <div style={{display:'flex',gap:12,flexWrap:'wrap',marginBottom:10}}>
-                  {p.ticketImg && <img src={p.ticketImg} alt='ticket' style={{width:100,height:70,objectFit:'cover',borderRadius:6,cursor:'pointer'}} onClick={()=>{const d=document.createElement('div');d.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:pointer';d.onclick=()=>document.body.removeChild(d);const img=document.createElement('img');img.src=p.ticketImg;img.style.cssText='max-width:90vw;max-height:90vh;object-fit:contain';d.appendChild(img);document.body.appendChild(d);}}/>}
-                  <div style={{flex:1}}>
-                    <div style={{fontWeight:700,fontSize:'0.9rem',marginBottom:4}}>{p.match}</div>
-                    <div style={{fontSize:'0.72rem',color:'var(--muted)',marginBottom:4}}>{p.league} - {p.tipster} - Momio {p.odds} - {p.time}</div>
-                    {p.aiAnalysis && <div style={{fontSize:'0.72rem',color:'var(--g)',background:'rgba(29,185,84,0.1)',padding:'4px 8px',borderRadius:4}}>{p.aiAnalysis.resultado} ({p.aiAnalysis.confianza}%) - {p.aiAnalysis.detalle}</div>}
-                  </div>
-                </div>
-                <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-                  <button onClick={()=>approveResult(p._id,'won')} style={{background:'rgba(29,185,84,0.15)',border:'1px solid var(--g)',color:'var(--g)',padding:'8px 16px',borderRadius:6,cursor:'pointer',fontWeight:700,fontSize:'0.8rem'}}>GANADO</button>
-                  <button onClick={()=>approveResult(p._id,'lost')} style={{background:'rgba(244,67,54,0.15)',border:'1px solid #f44336',color:'#f44336',padding:'8px 16px',borderRadius:6,cursor:'pointer',fontWeight:700,fontSize:'0.8rem'}}>PERDIDO</button>
-                  <button onClick={()=>approveResult(p._id,'void')} style={{background:'rgba(245,197,66,0.15)',border:'1px solid var(--gold)',color:'var(--gold)',padding:'8px 16px',borderRadius:6,cursor:'pointer',fontWeight:700,fontSize:'0.8rem'}}>VOID</button>
-                  <button onClick={()=>reanalyze(p._id)} style={{background:'rgba(100,100,255,0.15)',border:'1px solid #6464ff',color:'#6464ff',padding:'8px 16px',borderRadius:6,cursor:'pointer',fontWeight:700,fontSize:'0.8rem'}}>RE-ANALIZAR</button>
-                </div>
-              </div>
-            ))}
-          </div>
+
+        {/* RESULTS TAB */}
+        {tab==="results" && (
+          <ResultsReview picks={picks}/>
         )}
-        {tab==='history' && (
+
+        {/* PAYOUTS TAB */}
+        {tab==="payouts" && (
           <div>
-            <div style={{marginBottom:16,fontSize:'0.82rem',color:'var(--muted)'}}>{allPicks.filter(p=>p.result!=='pending').length} picks resueltos</div>
-            {allPicks.filter(p=>p.result!=='pending').map((p,i)=>(
-              <div key={p._id||i} style={{background:'var(--d3)',border:'1px solid var(--border)',borderRadius:10,padding:'14px 16px',marginBottom:8}}>
-                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8}}>
-                  <div>
-                    <div style={{fontWeight:700,fontSize:'0.9rem'}}>{p.match}</div>
-                    <div style={{fontSize:'0.72rem',color:'var(--muted)',marginTop:2}}>{p.league} - {p.tipster} - Momio {p.odds}</div>
-                    {p.aiAnalysis && <div style={{fontSize:'0.72rem',color:'var(--muted)',marginTop:2}}>IA: {p.aiAnalysis.resultado} ({p.aiAnalysis.confianza}%)</div>}
-                  </div>
-                  <div style={{display:'flex',alignItems:'center',gap:8}}>
-                    <span style={{padding:'4px 12px',borderRadius:6,fontSize:'0.75rem',fontWeight:700,background:p.result==='won'?'rgba(29,185,84,0.15)':p.result==='lost'?'rgba(244,67,54,0.15)':'rgba(245,197,66,0.15)',color:p.result==='won'?'var(--g)':p.result==='lost'?'#f44336':'var(--gold)'}}>
-                      {p.result==='won'?'GANADO':p.result==='lost'?'PERDIDO':'VOID'}
-                    </span>
-                    <button onClick={async()=>{if(!window.confirm('Restablecer?'))return;const token=localStorage.getItem('tpz_token');const r=await fetch(BACKEND_URL+'/api/picks/'+p._id+'/result',{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({result:'pending'})});if(r.ok){alert('Restablecido');loadData();}}} style={{background:'rgba(100,100,255,0.15)',border:'1px solid #6464ff',color:'#6464ff',padding:'4px 10px',borderRadius:6,cursor:'pointer',fontSize:'0.72rem',fontWeight:700}}>Restablecer</button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-        {tab==='payouts' && (
-          <div>
-            <div style={{background:'rgba(245,197,66,0.08)',border:'1px solid rgba(245,197,66,0.2)',borderRadius:10,padding:'14px 16px',marginBottom:16,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+            {/* Week info */}
+            <div style={{background:"rgba(245,197,66,0.08)",border:"1px solid rgba(245,197,66,0.2)",borderRadius:10,padding:"14px 16px",marginBottom:16,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
               <div>
-                <div style={{fontSize:'0.72rem',color:'var(--gold)',fontWeight:700,marginBottom:2}}>CORTE SEMANAL</div>
-                <div style={{fontSize:'0.82rem',color:'var(--text)'}}>Semana actual</div>
+                <div style={{fontSize:"0.72rem",color:"var(--gold)",fontWeight:700,marginBottom:2}}>CORTE SEMANAL - SEMANA 17</div>
+                <div style={{fontSize:"0.82rem",color:"var(--text)"}}>Lun 27 Abr - Dom 3 May 2026</div>
               </div>
-              <div style={{textAlign:'right'}}>
-                <div style={{fontFamily:"'Bebas Neue'",fontSize:'1.6rem',color:'var(--gold)'}}>{'$'+payoutTipsters.reduce((s,t)=>s+t.sales*0.9,0).toFixed(2)}</div>
-                <div style={{fontSize:'0.68rem',color:'var(--muted)'}}>Total por pagar (90%)</div>
+              <div style={{textAlign:"right"}}>
+                <div style={{fontFamily:"'Bebas Neue'",fontSize:"1.6rem",color:"var(--gold)"}}>${totalPending.toFixed(2)}</div>
+                <div style={{fontSize:"0.68rem",color:"var(--muted)"}}>Total por aprobar</div>
               </div>
             </div>
-            {payoutTipsters.length===0 && <div style={{textAlign:'center',color:'var(--muted)',padding:40}}>No hay tipsters con ventas aun</div>}
-            {payoutTipsters.map((t,i)=>(
-              <div key={i} style={{background:'var(--d3)',border:'1px solid var(--border)',borderRadius:10,padding:'16px',marginBottom:10}}>
-                <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:10}}>
-                  <div>
-                    <div style={{fontWeight:700,fontSize:'0.9rem'}}>{t.name}</div>
-                    <div style={{fontSize:'0.72rem',color:'var(--muted)'}}>{t.email}</div>
-                    <div style={{fontSize:'0.72rem',color:'var(--muted)'}}>{t.picks} picks vendidos</div>
-                    {t.paypal && <div style={{fontSize:'0.72rem',color:'var(--g)'}}>PayPal: {t.paypal}</div>}
+
+            {/* Tipsters list */}
+            {tipsters.map(t=>(
+              <div key={t.id} style={{background:"var(--d3)",border:`1px solid ${payoutStatus[t.id]==="approved"?"rgba(29,185,84,0.3)":payoutStatus[t.id]==="rejected"?"rgba(244,67,54,0.3)":"var(--border)"}`,borderRadius:10,padding:"16px",marginBottom:10}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:10}}>
+                  <div style={{flex:1}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+                      <div style={{width:36,height:36,borderRadius:"50%",background:"var(--g)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Bebas Neue'",color:"#000",fontSize:"1.1rem",fontWeight:900,flexShrink:0}}>
+                        {t.name[0]}
+                      </div>
+                      <div>
+                        <div style={{fontWeight:700,fontSize:"0.95rem"}}>{t.name}</div>
+                        <div style={{fontSize:"0.72rem",color:"var(--text-dim)"}}>{t.email}</div>
+                      </div>
+                    </div>
+                    <div style={{fontSize:"0.75rem",color:"var(--muted)",marginLeft:44}}>
+                      PayPal: <span style={{color:"var(--text)",fontWeight:600}}>{t.paypal}</span>
+                    </div>
+                    <div style={{fontSize:"0.72rem",color:"var(--muted)",marginLeft:44,marginTop:2}}>
+                      {t.picks} picks · Total histórico: ${t.totalEarnings.toFixed(2)}
+                    </div>
                   </div>
-                  <div style={{textAlign:'right'}}>
-                    <div style={{fontFamily:"'Bebas Neue'",fontSize:'1.4rem',color:'var(--gold)'}}>{'$'+(t.sales*0.9).toFixed(2)}</div>
-                    <div style={{fontSize:'0.65rem',color:'var(--muted)'}}>Tu parte: {'$'+t.commission.toFixed(2)}</div>
+                  <div style={{textAlign:"right"}}>
+                    <div style={{fontFamily:"'Bebas Neue'",fontSize:"1.8rem",color:"var(--g)",lineHeight:1}}>${t.weekEarnings.toFixed(2)}</div>
+                    <div style={{fontSize:"0.68rem",color:"var(--muted)",marginBottom:8}}>esta semana (90%)</div>
+
+                    {payoutStatus[t.id]==="pending" && (
+                      <div style={{display:"flex",gap:6,justifyContent:"flex-end"}}>
+                        <button onClick={()=>setPayoutStatus(p=>({...p,[t.id]:"rejected"}))}
+                          style={{background:"rgba(244,67,54,0.15)",color:"#f44336",border:"1px solid rgba(244,67,54,0.3)",padding:"6px 14px",borderRadius:6,cursor:"pointer",fontSize:"0.75rem",fontWeight:700}}>
+                          Rechazar
+                        </button>
+                        <button onClick={()=>setPayoutStatus(p=>({...p,[t.id]:"approved"}))}
+                          style={{background:"var(--g)",color:"#000",border:"none",padding:"6px 14px",borderRadius:6,cursor:"pointer",fontSize:"0.75rem",fontWeight:700}}>
+                          Aprobar Pago
+                        </button>
+                      </div>
+                    )}
+                    {payoutStatus[t.id]==="approved" && (
+                      <div style={{background:"rgba(29,185,84,0.15)",color:"var(--g)",border:"1px solid rgba(29,185,84,0.3)",padding:"6px 14px",borderRadius:6,fontSize:"0.75rem",fontWeight:700,textAlign:"center"}}>
+                        ✓ APROBADO - Enviando a PayPal
+                      </div>
+                    )}
+                    {payoutStatus[t.id]==="rejected" && (
+                      <div style={{display:"flex",gap:6,justifyContent:"flex-end",alignItems:"center"}}>
+                        <span style={{background:"rgba(244,67,54,0.15)",color:"#f44336",padding:"4px 10px",borderRadius:6,fontSize:"0.72rem",fontWeight:700}}>RECHAZADO</span>
+                        <button onClick={()=>setPayoutStatus(p=>({...p,[t.id]:"pending"}))}
+                          style={{background:"var(--d4)",color:"var(--muted)",border:"1px solid var(--border)",padding:"4px 10px",borderRadius:6,cursor:"pointer",fontSize:"0.7rem"}}>
+                          Deshacer
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
             ))}
+
+            {/* Approve all button */}
+            <button onClick={()=>setPayoutStatus(tipsters.reduce((acc,t)=>({...acc,[t.id]:"approved"}),{}))}
+              style={{width:"100%",background:"var(--g)",color:"#000",border:"none",padding:"14px",borderRadius:8,fontFamily:"'Barlow Condensed'",fontSize:"1rem",fontWeight:900,letterSpacing:2,cursor:"pointer",marginTop:8}}>
+              APROBAR TODOS LOS PAGOS
+            </button>
           </div>
         )}
-        {tab==='users' && (
+
+        {/* USERS TAB */}
+        {tab==="users" && (
           <div>
-            {adminUsers.length===0 && <div style={{textAlign:'center',color:'var(--muted)',padding:40}}>No hay usuarios</div>}
-            {adminUsers.map((u,i)=>(
-              <div key={i} style={{background:'var(--d3)',border:'1px solid var(--border)',borderRadius:10,padding:'14px 16px',marginBottom:8,display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,flexWrap:'wrap'}}>
-                <div style={{display:'flex',alignItems:'center',gap:12}}>
-                  <div style={{width:36,height:36,borderRadius:'50%',background:'var(--d4)',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:"'Bebas Neue'",color:'var(--g)',fontSize:'1rem'}}>{(u.name||'?')[0]}</div>
+            {[
+              {name:"ManuPicks",email:"pro@thepickzone.com",role:"pro",joined:"Abr 20, 2026",picks:12},
+              {name:"BetKing",email:"betking@gmail.com",role:"pro",joined:"Abr 18, 2026",picks:8},
+              {name:"Juan Perez",email:"juan@gmail.com",role:"basic",joined:"Abr 22, 2026",picks:0},
+              {name:"Maria Lopez",email:"maria@gmail.com",role:"basic",joined:"Abr 24, 2026",picks:0},
+              {name:"ZonePro",email:"zonepro@gmail.com",role:"pro",joined:"Abr 15, 2026",picks:5},
+            ].map((u,i)=>(
+              <div key={i} style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:"14px 16px",marginBottom:8,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
+                <div style={{display:"flex",alignItems:"center",gap:12}}>
+                  <div style={{width:36,height:36,borderRadius:"50%",background:"var(--d4)",border:"2px solid var(--border)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Bebas Neue'",color:"var(--g)",fontSize:"1rem",flexShrink:0}}>
+                    {u.name[0]}
+                  </div>
                   <div>
-                    <div style={{fontWeight:700,fontSize:'0.9rem'}}>{u.name}</div>
-                    <div style={{fontSize:'0.72rem',color:'var(--text-dim)'}}>{u.email} - {u.createdAt?new Date(u.createdAt).toLocaleDateString('es-MX'):''}</div>
+                    <div style={{fontWeight:700,fontSize:"0.9rem"}}>{u.name}</div>
+                    <div style={{fontSize:"0.72rem",color:"var(--text-dim)"}}>{u.email} · {u.joined}</div>
                   </div>
                 </div>
-                <span style={{fontSize:'0.65rem',fontWeight:900,padding:'3px 10px',borderRadius:100,letterSpacing:1,background:u.role==='pro'?'rgba(29,185,84,0.15)':u.role==='admin'?'rgba(245,197,66,0.15)':'rgba(107,128,120,0.15)',color:u.role==='pro'?'var(--g)':u.role==='admin'?'var(--gold)':'var(--muted)'}}>
-                  {u.role==='pro'?'PRO':u.role==='admin'?'ADMIN':'BASICO'}
-                </span>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{fontSize:"0.65rem",fontWeight:900,padding:"3px 10px",borderRadius:100,letterSpacing:1,
+                    background:u.role==="pro"?"rgba(29,185,84,0.15)":"rgba(107,128,120,0.15)",
+                    color:u.role==="pro"?"var(--g)":"var(--muted)",
+                  }}>
+                    {u.role==="pro"?"PRO ⭐":"BASICO"}
+                  </span>
+                  {u.role==="pro" && <span style={{fontSize:"0.72rem",color:"var(--text-dim)"}}>{u.picks} picks</span>}
+                </div>
               </div>
             ))}
           </div>
         )}
+
+        {/* PICKS TAB */}
+        {tab==="picks" && (
+          <div>
+            {picks.slice(0,10).map((p,i)=>(
+              <div key={i} style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:"12px 16px",marginBottom:8,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:"0.88rem",fontWeight:700,marginBottom:2}}>{p.match}</div>
+                  <div style={{fontSize:"0.72rem",color:"var(--text-dim)"}}>{p.tipster} · {p.league} · Momio {p.odds}</div>
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
+                  <span style={{fontFamily:"'Bebas Neue'",fontSize:"1rem",color:"var(--gold)"}}>${p.price}</span>
+                  <span style={{fontSize:"0.65rem",background:"rgba(29,185,84,0.1)",color:"var(--g)",padding:"2px 8px",borderRadius:100,fontWeight:700}}>
+                    {p.buyers?.length||0} ventas
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
       </div>
     </div>
   );
 }
 
+
+// ── PRO PROFILE VIEW ──────────────────────────────────────────────────────────
 function ProProfileView({ setView, user, setUser, picks }) {
   const [tab, setTab] = useState("stats");
   const [editMode, setEditMode] = useState(false);
@@ -4202,67 +4169,215 @@ function BecomeProView({ setView, user, setUser }) {
 
 // ── REVENUE DASHBOARD ────────────────────────────────────────────────────────
 function RevenueDashboard({ setView, picks }) {
-  const [data, setData] = useState({ totalRevenue:0, commission:0, buyers:0, tipsters:[], proUsers:0 });
-  const [loading, setLoading] = useState(true);
-  useEffect(()=>{
-    const token = localStorage.getItem('tpz_token');
-    const h = { 'Authorization': 'Bearer ' + token };
-    Promise.all([
-      fetch(BACKEND_URL+'/api/admin/users', { headers: h }).then(r=>r.json()),
-      fetch(BACKEND_URL+'/api/admin/picks-all', { headers: h }).then(r=>r.json()),
-    ]).then(([users, allPicks])=>{
-      const proUsers = Array.isArray(users) ? users.filter(u=>u.role==='pro') : [];
-      const resolved = Array.isArray(allPicks) ? allPicks.filter(p=>p.result!=='pending') : [];
-      const totalRevenue = resolved.reduce((s,p)=>s+(p.buyers?.length||0)*parseFloat(p.price||0),0);
-      const totalBuyers = resolved.reduce((s,p)=>s+(p.buyers?.length||0),0);
-      const tipsterData = proUsers.map(u=>{
-        const uPicks = resolved.filter(p=>String(p.tipsterId)===String(u._id));
-        const sales = uPicks.reduce((s,p)=>s+(p.buyers?.length||0)*parseFloat(p.price||0),0);
-        return { name:u.name, roi:u.roi||'+0%', picks:uPicks.length, sales, commission:sales*0.1 };
-      });
-      setData({ totalRevenue, commission:totalRevenue*0.1, buyers:totalBuyers, tipsters:tipsterData, proUsers:proUsers.length });
-      setLoading(false);
-    }).catch(()=>setLoading(false));
-  },[]);
-  if(loading) return <div style={{paddingTop:120,textAlign:'center',color:'var(--muted)'}}>Cargando...</div>;
+
+  // Mock weekly data - in production this comes from MongoDB
+  const weeklyData = [
+    { week:"Sem 17 · 28 Abr - 4 May",  revenue:520.50, commission:52.05,  status:"current" },
+    { week:"Sem 16 · 21-27 Abr",        revenue:380.00, commission:38.00,  status:"paid" },
+    { week:"Sem 15 · 14-20 Abr",        revenue:290.00, commission:29.00,  status:"paid" },
+    { week:"Sem 14 · 7-13 Abr",         revenue:440.00, commission:44.00,  status:"paid" },
+    { week:"Sem 13 · 31 Mar - 6 Abr",   revenue:175.00, commission:17.50,  status:"paid" },
+  ];
+
+  const tipsters = [
+    {
+      id:1, name:"ManuPicks", email:"pro@thepickzone.com", paypal:"manu@paypal.com",
+      avatar:null, roi:"+225%", winRate:68,
+      weekSales:245.00, weekPicks:8, weekBuyers:28,
+      totalSales:1820.00, totalPicks:47, totalBuyers:210,
+      commission:24.50, status:"active",
+      history:[
+        {week:"Sem 16", sales:180.00, commission:18.00},
+        {week:"Sem 15", sales:120.00, commission:12.00},
+        {week:"Sem 14", sales:210.00, commission:21.00},
+      ]
+    },
+    {
+      id:2, name:"BetKing", email:"betking@gmail.com", paypal:"betking@paypal.com",
+      avatar:null, roi:"+180%", winRate:62,
+      weekSales:180.50, weekPicks:5, weekBuyers:18,
+      totalSales:940.00, totalPicks:28, totalBuyers:95,
+      commission:18.05, status:"active",
+      history:[
+        {week:"Sem 16", sales:120.00, commission:12.00},
+        {week:"Sem 15", sales:90.00,  commission:9.00},
+        {week:"Sem 14", sales:145.00, commission:14.50},
+      ]
+    },
+    {
+      id:3, name:"ZonePro", email:"zonepro@gmail.com", paypal:"zonepro@paypal.com",
+      avatar:null, roi:"+142%", winRate:59,
+      weekSales:95.00, weekPicks:3, weekBuyers:10,
+      totalSales:520.00, totalPicks:15, totalBuyers:52,
+      commission:9.50, status:"active",
+      history:[
+        {week:"Sem 16", sales:80.00, commission:8.00},
+        {week:"Sem 15", sales:60.00, commission:6.00},
+        {week:"Sem 14", sales:85.00, commission:8.50},
+      ]
+    },
+  ];
+
+  const totalWeekRevenue  = tipsters.reduce((s,t)=>s+t.weekSales, 0);
+  const totalWeekCommission = totalWeekRevenue * 0.10;
+  const totalRevenue      = tipsters.reduce((s,t)=>s+t.totalSales, 0);
+  const totalCommission   = totalRevenue * 0.10;
+  const totalBuyers       = tipsters.reduce((s,t)=>s+t.totalBuyers, 0);
+
+  const [selected, setSelected] = useState(null);
+
+  // Next Monday countdown
+  const now = new Date();
+  const daysUntilMonday = now.getDay()===0 ? 1 : 8 - now.getDay();
+  const nextMonday = new Date(now);
+  nextMonday.setDate(now.getDate() + daysUntilMonday);
+  nextMonday.setHours(9,0,0,0);
+  const msLeft = nextMonday - now;
+  const daysLeft = Math.floor(msLeft/86400000);
+  const hoursLeft = Math.floor((msLeft%86400000)/3600000);
+
   return (
-    <div style={{paddingTop:80,minHeight:'100vh',padding:'clamp(80px,12vw,100px) 5% 60px'}}>
-      <div style={{maxWidth:700,margin:'0 auto'}}>
-        <button onClick={()=>setView('admin-panel')} style={{background:'none',border:'none',color:'var(--g)',cursor:'pointer',fontSize:'0.85rem',marginBottom:20}}>
-          ← Volver al Admin
-        </button>
-        <div style={{marginBottom:24}}>
-          <div style={{fontSize:'0.68rem',color:'var(--g)',letterSpacing:3,textTransform:'uppercase',fontWeight:700,marginBottom:8}}>Panel de Control</div>
-          <h1 style={{fontFamily:"'Bebas Neue'",fontSize:'clamp(2rem,5vw,3rem)'}}>Revenue & <span style={{color:'var(--g)'}}>Ganancias</span></h1>
+    <div style={{paddingTop:80,minHeight:"100vh",padding:"clamp(80px,12vw,100px) 5% 60px"}}>
+      <div style={{maxWidth:700,margin:"0 auto"}}>
+
+        <div style={{marginBottom:28}}>
+          <div style={{fontSize:"0.68rem",color:"var(--g)",letterSpacing:3,textTransform:"uppercase",fontWeight:700,marginBottom:8}}>Panel de control</div>
+          <h1 style={{fontFamily:"'Bebas Neue'",fontSize:"clamp(2rem,5vw,3rem)"}}>Revenue & <span style={{color:"var(--g)"}}>Ganancias</span></h1>
         </div>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))',gap:12,marginBottom:24}}>
-          {[['Revenue Total','$'+data.totalRevenue.toFixed(2)],['Mi Ganancia (10%)','$'+data.commission.toFixed(2)],['Compradores',String(data.buyers)],['Tipsters Pro',String(data.proUsers)]].map(([l,v])=>(
-            <div key={l} style={{background:'var(--d3)',border:'1px solid var(--border)',borderRadius:10,padding:'16px 12px',textAlign:'center'}}>
-              <div style={{fontFamily:"'Bebas Neue'",fontSize:'1.6rem',color:'var(--g)'}}>{v}</div>
-              <div style={{fontSize:'0.62rem',color:'var(--muted)'}}>{l}</div>
+
+        {/* Top stats */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:12,marginBottom:24}}>
+          {[
+            ["💰","$"+totalWeekRevenue.toFixed(2),"Ventas esta semana"],
+            ["🏦","$"+totalWeekCommission.toFixed(2),"Mi ganancia (10%)"],
+            ["📊","$"+totalRevenue.toFixed(2),"Revenue total"],
+            ["🏧","$"+totalCommission.toFixed(2),"Comision total"],
+            ["👥",totalBuyers.toString(),"Compradores"],
+            ["⭐",tipsters.length.toString(),"Tipsters Pro"],
+          ].map(([ic,v,l])=>(
+            <div key={l} style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:"16px 12px",textAlign:"center"}}>
+              <div style={{fontSize:"1.2rem",marginBottom:6}}>{ic}</div>
+              <div style={{fontFamily:"'Bebas Neue'",fontSize:"1.5rem",color:"var(--g)",lineHeight:1}}>{v}</div>
+              <div style={{fontSize:"0.6rem",color:"var(--muted)",letterSpacing:1,marginTop:3,lineHeight:1.3}}>{l}</div>
             </div>
           ))}
         </div>
-        <div style={{background:'var(--d3)',border:'1px solid var(--border)',borderRadius:10,padding:16}}>
-          <div style={{fontSize:'0.72rem',color:'var(--g)',fontWeight:700,marginBottom:12,letterSpacing:2}}>TIPSTERS PRO</div>
-          {data.tipsters.length===0 && <div style={{textAlign:'center',color:'var(--muted)',padding:20}}>Sin datos aun</div>}
-          {data.tipsters.map((t,i)=>(
-            <div key={i} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'12px 0',borderBottom:'1px solid var(--border)'}}>
+
+        {/* Next payout countdown */}
+        <div style={{background:"linear-gradient(135deg,#0c2018,#091a10)",border:"1px solid rgba(29,185,84,0.3)",borderRadius:12,padding:20,marginBottom:24,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
+          <div>
+            <div style={{fontSize:"0.68rem",color:"var(--g)",letterSpacing:2,textTransform:"uppercase",fontWeight:700,marginBottom:4}}>Proximo corte semanal</div>
+            <div style={{fontFamily:"'Bebas Neue'",fontSize:"2rem",color:"var(--text)",lineHeight:1}}>Lunes</div>
+            <div style={{fontSize:"0.8rem",color:"var(--muted)",marginTop:4}}>En {daysLeft} dias y {hoursLeft} horas</div>
+          </div>
+          <div style={{textAlign:"right"}}>
+            <div style={{fontSize:"0.68rem",color:"var(--muted)",marginBottom:4}}>Tu ganancia acumulada</div>
+            <div style={{fontFamily:"'Bebas Neue'",fontSize:"2.5rem",color:"var(--g)",textShadow:"0 1px 0 #000,0 2px 6px rgba(0,0,0,0.9)",lineHeight:1}}>${totalWeekCommission.toFixed(2)}</div>
+            <div style={{fontSize:"0.72rem",color:"var(--text-dim)"}}>10% de ${totalWeekRevenue.toFixed(2)} en ventas</div>
+          </div>
+        </div>
+
+        {/* Tipsters breakdown */}
+        <div style={{marginBottom:20}}>
+          <div style={{fontSize:"0.72rem",color:"var(--muted)",letterSpacing:2,textTransform:"uppercase",fontWeight:700,marginBottom:14}}>Ventas por tipster esta semana</div>
+          {tipsters.map(t=>(
+            <div key={t.id}>
+              <div onClick={()=>setSelected(selected===t.id?null:t.id)}
+                style={{background:"var(--d3)",border:`1px solid ${selected===t.id?"var(--g)":"var(--border)"}`,borderRadius:10,padding:"16px",marginBottom:8,cursor:"pointer",transition:"all .2s"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10}}>
+                  <div style={{display:"flex",alignItems:"center",gap:12}}>
+                    <div style={{width:42,height:42,borderRadius:"50%",background:"var(--g)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Bebas Neue'",color:"#000",fontSize:"1.2rem",flexShrink:0}}>
+                      {t.name[0]}
+                    </div>
+                    <div>
+                      <div style={{fontWeight:700,fontSize:"0.95rem",marginBottom:2,textShadow:"0 1px 3px rgba(0,0,0,0.8)"}}>{t.name}</div>
+                      <div style={{fontSize:"0.72rem",color:"var(--text-dim)"}}>{t.weekPicks} picks · {t.weekBuyers} compradores · ROI {t.roi}</div>
+                    </div>
+                  </div>
+                  <div style={{textAlign:"right"}}>
+                    <div style={{fontFamily:"'Bebas Neue'",fontSize:"1.6rem",color:"var(--text)",lineHeight:1}}>${t.weekSales.toFixed(2)}</div>
+                    <div style={{display:"flex",gap:6,justifyContent:"flex-end",marginTop:4}}>
+                      <span style={{fontSize:"0.68rem",color:"var(--g)",background:"rgba(29,185,84,0.1)",padding:"2px 8px",borderRadius:100,fontWeight:700}}>
+                        Tu parte: ${t.commission.toFixed(2)}
+                      </span>
+                      <span style={{fontSize:"0.68rem",color:"var(--muted)",background:"var(--d4)",padding:"2px 8px",borderRadius:100}}>
+                        Tipster: ${(t.weekSales*0.9).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Expanded history */}
+                {selected===t.id && (
+                  <div style={{marginTop:14,borderTop:"1px solid var(--border)",paddingTop:14}}>
+                    <div style={{fontSize:"0.68rem",color:"var(--muted)",letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Historial de semanas anteriores</div>
+                    {t.history.map((h,i)=>(
+                      <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid rgba(255,255,255,0.04)",fontSize:"0.82rem"}}>
+                        <span style={{color:"var(--muted)"}}>{h.week}</span>
+                        <div style={{display:"flex",gap:12}}>
+                          <span style={{color:"var(--text)",fontWeight:600}}>${h.sales.toFixed(2)} vendido</span>
+                          <span style={{color:"var(--g)",fontWeight:700,textShadow:"0 1px 3px rgba(0,0,0,0.9)"}}>+${h.commission.toFixed(2)} tuyo</span>
+                        </div>
+                      </div>
+                    ))}
+                    <div style={{marginTop:10,display:"flex",justifyContent:"space-between",fontSize:"0.82rem",fontWeight:700}}>
+                      <span style={{color:"var(--muted)"}}>Total historico</span>
+                      <div style={{display:"flex",gap:12}}>
+                        <span style={{color:"var(--text)"}}>${t.totalSales.toFixed(2)}</span>
+                        <span style={{color:"var(--g)"}}>+${(t.totalSales*0.10).toFixed(2)} tuyo</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Weekly history */}
+        <div style={{background:"var(--d2)",border:"1px solid var(--border)",borderRadius:12,padding:20}}>
+          <div style={{fontSize:"0.72rem",color:"var(--muted)",letterSpacing:2,textTransform:"uppercase",fontWeight:700,marginBottom:14}}>Historial semanal</div>
+          {weeklyData.map((w,i)=>(
+            <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:"1px solid var(--border)",flexWrap:"wrap",gap:8}}>
               <div>
-                <div style={{fontWeight:700,fontSize:'0.9rem'}}>{t.name}</div>
-                <div style={{fontSize:'0.72rem',color:'var(--muted)'}}>{t.picks} picks - ROI {t.roi}</div>
+                <div style={{fontSize:"0.85rem",fontWeight:600}}>{w.week}</div>
+                <div style={{fontSize:"0.72rem",color:"var(--text-dim)"}}>Ventas totales: ${w.revenue.toFixed(2)}</div>
               </div>
-              <div style={{textAlign:'right'}}>
-                <div style={{color:'var(--gold)',fontWeight:700,fontFamily:"'Bebas Neue'",fontSize:'1.2rem'}}>{'$'+t.sales.toFixed(2)}</div>
-                <div style={{fontSize:'0.65rem',color:'var(--muted)'}}>{'Tu parte: $'+t.commission.toFixed(2)}</div>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <div style={{textAlign:"right"}}>
+                  <div style={{fontFamily:"'Bebas Neue'",fontSize:"1.3rem",color:"var(--g)",lineHeight:1}}>${w.commission.toFixed(2)}</div>
+                  <div style={{fontSize:"0.62rem",color:"var(--muted)"}}>tu ganancia</div>
+                </div>
+                <span style={{
+                  fontSize:"0.65rem",fontWeight:900,padding:"3px 10px",borderRadius:100,
+                  background:w.status==="current"?"rgba(245,197,66,0.15)":"rgba(29,185,84,0.15)",
+                  color:w.status==="current"?"var(--gold)":"var(--g)",
+                }}>
+                  {w.status==="current"?"EN CURSO":"PAGADO ✓"}
+                </span>
               </div>
             </div>
           ))}
+          {/* Total */}
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",paddingTop:14,marginTop:4}}>
+            <span style={{fontWeight:700,fontSize:"0.9rem"}}>Total acumulado</span>
+            <div style={{fontFamily:"'Bebas Neue'",fontSize:"1.8rem",color:"var(--g)"}}>
+              ${weeklyData.reduce((s,w)=>s+w.commission,0).toFixed(2)}
+            </div>
+          </div>
         </div>
+
+        <button onClick={()=>setView("admin-panel")}
+          style={{width:"100%",background:"var(--d3)",color:"var(--muted)",border:"1px solid var(--border)",padding:"12px",borderRadius:8,fontFamily:"'Barlow Condensed'",fontSize:"0.95rem",fontWeight:700,letterSpacing:2,cursor:"pointer",marginTop:16}}>
+          ← VOLVER AL PANEL ADMIN
+        </button>
       </div>
     </div>
   );
 }
+
+
+// ── ADMIN PROFILE VIEW ───────────────────────────────────────────────────────
 function AdminProfileView({ setView, user, setUser }) {
   const [tab, setTab] = useState("config");
   const [commission, setCommission] = useState("10");
@@ -4674,18 +4789,11 @@ export default function App() {
   useEffect(()=>{
     const token = localStorage.getItem("tpz_token");
     if(token && !user){
-      fetch(BACKEND_URL+"/api/auth/me", { headers:{ "Authorization":"Bearer "+token } })
-        .then(r=>r.ok?r.json():null)
-        .then(data=>{ if(data && data._id) setUser(data); })
-        .catch(()=>{});
+      fetch(BACKEND_URL+"/api/auth/me",{headers:{"Authorization":"Bearer "+token}})
+        .then(r=>r.ok?r.json():null).then(d=>{if(d&&d._id)setUser(d);}).catch(()=>{});
     }
   },[]);
-  useEffect(()=>{
-    fetch(BACKEND_URL+"/api/picks")
-      .then(r=>r.json())
-      .then(data=>{ if(Array.isArray(data)&&data.length>0) setPicks(data.map(p=>({...p,id:p._id||p.id}))); })
-      .catch(()=>{});
-  },[]);
+  useEffect(()=>{ fetch(BACKEND_URL+"/api/picks").then(r=>r.json()).then(data=>{if(Array.isArray(data)&&data.length>0)setPicks(data.map(p=>({...p,id:p._id||p.id})));}).catch(()=>{}); },[]);
   useEffect(()=>{ window._tpzUser = user; }, [user]);
 
   const gotoView = v=>{ setView(v); window.scrollTo({top:0,behavior:"smooth"}); };
