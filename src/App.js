@@ -242,8 +242,18 @@ function PurchaseView({ pick, setView, user }) {
 
   const timeDisplay = pick.time && (pick.time.includes('T') || pick.time.includes('Z')) ? isoToLocal(pick.time) : pick.time;
 
+  const [fullPick, setFullPick] = React.useState(pick);
+
+  async function loadFullPick() {
+    try {
+      const token = localStorage.getItem("tpz_token");
+      const r = await fetch(BACKEND_URL+"/api/picks/"+pick._id+"/full",{headers:{"Authorization":"Bearer "+token}});
+      if(r.ok){ const data = await r.json(); setFullPick(data); }
+    } catch(e){}
+  }
+
   async function handleBuy() {
-    if (pick.price === 0 || pick.price === "0") { setStep(2); return; }
+    if (pick.price === 0 || pick.price === "0") { await loadFullPick(); setStep(2); return; }
     setPaying(true); setError("");
     try {
       const token = localStorage.getItem("tpz_token");
@@ -273,8 +283,8 @@ function PurchaseView({ pick, setView, user }) {
         <p style={{color:"var(--muted)",marginBottom:24}}>{pick.match}</p>
         <div style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:12,padding:20,marginBottom:20,textAlign:"left"}}>
           <div style={{fontSize:"0.7rem",color:"var(--g)",letterSpacing:2,fontWeight:700,marginBottom:12}}>🔓 CONTENIDO DESBLOQUEADO</div>
-          {pick.ticketImg ? (
-            <img src={pick.ticketImg} alt="Ticket" style={{width:"100%",borderRadius:8}}/>
+          {fullPick.ticketImg ? (
+            <img src={fullPick.ticketImg} alt="Ticket" style={{width:"100%",borderRadius:8}}/>
           ) : (
             <div style={{textAlign:"center",color:"var(--muted)",padding:20}}>Ticket no disponible</div>
           )}
