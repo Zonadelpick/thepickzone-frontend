@@ -104,9 +104,16 @@ function NavBar({ view, setView, user, setUser, notifications, setNotifications 
               Mi Perfil
             </button>
             {(user.role === 'pro' || user.role === 'admin') && (
-              <button onClick={()=>setView(user.role==="admin"?"admin-panel":"pro-panel")} style={{background:"var(--g)",color:"#000",border:"none",padding:"7px 14px",borderRadius:6,cursor:"pointer",fontSize:"0.75rem",fontWeight:900,letterSpacing:1,textTransform:"uppercase"}}>
-                {user.role==="admin"?"Admin":"Panel Pro"}
-              </button>
+              <>
+                {user.role==="admin" && (
+                  <button onClick={()=>setView("pro-panel")} style={{background:"var(--d3)",color:"var(--g)",border:"1px solid var(--g)",padding:"7px 14px",borderRadius:6,cursor:"pointer",fontSize:"0.75rem",fontWeight:900,letterSpacing:1,textTransform:"uppercase"}}>
+                    Panel Pro
+                  </button>
+                )}
+                <button onClick={()=>setView(user.role==="admin"?"admin-panel":"pro-panel")} style={{background:"var(--g)",color:"#000",border:"none",padding:"7px 14px",borderRadius:6,cursor:"pointer",fontSize:"0.75rem",fontWeight:900,letterSpacing:1,textTransform:"uppercase"}}>
+                  {user.role==="admin"?"Admin":"Panel Pro"}
+                </button>
+              </>
             )}
             <button onClick={()=>{setUser(null);localStorage.removeItem("tpz_token");setView("home");}} style={{background:"var(--d3)",color:"var(--muted)",border:"1px solid var(--border)",padding:"7px 10px",borderRadius:6,cursor:"pointer",fontSize:"0.72rem"}}>
               Salir
