@@ -758,13 +758,23 @@ function ProPanelView({ user, addPick, setView, picks }) {
           <div style={{fontWeight:700,fontSize:"1rem"}}>{match?.home} vs {match?.away}</div>
           <div style={{fontSize:"0.72rem",color:"var(--g)",marginTop:4}}>{league?.name} · {match?.time}</div>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
-          {[["Momio",odds,setOdds,"decimal"],["Bank %",bank,setBank,"numeric"],["Precio $",price,setPrice,"numeric"]].map(([label,val,setter,mode])=>(
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
+          {[["Momio",odds,setOdds,"decimal"],["Bank %",bank,setBank,"numeric"]].map(([label,val,setter,mode])=>(
             <div key={label} style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:"12px"}}>
               <div style={{fontSize:"0.68rem",color:"var(--muted)",letterSpacing:1,marginBottom:6}}>{label}</div>
               <input type="text" inputMode={mode} value={val} onChange={e=>setter(e.target.value)} style={{background:"none",border:"none",outline:"none",color:"var(--g)",fontSize:"1.4rem",fontWeight:700,width:"100%"}}/>
             </div>
           ))}
+        </div>
+        <div style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:"12px",marginBottom:16}}>
+          <div style={{fontSize:"0.68rem",color:"var(--muted)",letterSpacing:1,marginBottom:10}}>PRECIO DEL PICK</div>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            {[["FREE","0"],["$5","5"],["$10","10"],["$20","20"],["$50","50"],["$100","100"]].map(([label,val])=>(
+              <button key={val} onClick={()=>setPrice(val)} style={{background:price===val?"var(--g)":"var(--d4)",color:price===val?"#000":"var(--text)",border:"1px solid",borderColor:price===val?"var(--g)":"var(--border)",borderRadius:8,padding:"8px 14px",cursor:"pointer",fontWeight:700,fontSize:"0.85rem",transition:"all .2s"}}>
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
         <div style={{marginBottom:16}}>
           {imgSrc?(
