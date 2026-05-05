@@ -493,8 +493,20 @@ function ProfileView({ setView, user, setUser }) {
             {editMode?"Cancelar":"✏️ Editar"}
           </button>
           <div style={{display:"flex",alignItems:"center",gap:20,flexWrap:"wrap"}}>
-            <div style={{width:80,height:80,borderRadius:"50%",background:"var(--d4)",border:"3px solid var(--g)",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",flexShrink:0}}>
-              {avatar?<img src={avatar} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<span style={{fontFamily:"'Bebas Neue'",fontSize:"2rem",color:"var(--g)"}}>{(user?.name||"U")[0].toUpperCase()}</span>}
+            <div style={{position:"relative",flexShrink:0}}>
+              {editMode ? (
+                <label style={{cursor:"pointer"}}>
+                  <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>setAvatar(ev.target.result);r.readAsDataURL(f);}}/>
+                  <div style={{width:80,height:80,borderRadius:"50%",background:"var(--d4)",border:"3px solid var(--g)",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",position:"relative"}}>
+                    {avatar?<img src={avatar} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<span style={{fontFamily:"'Bebas Neue'",fontSize:"2rem",color:"var(--g)"}}>{(name||"U")[0].toUpperCase()}</span>}
+                    <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.2rem"}}>📷</div>
+                  </div>
+                </label>
+              ) : (
+                <div style={{width:80,height:80,borderRadius:"50%",background:"var(--d4)",border:"3px solid var(--g)",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}>
+                  {avatar?<img src={avatar} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<span style={{fontFamily:"'Bebas Neue'",fontSize:"2rem",color:"var(--g)"}}>{(user?.name||"U")[0].toUpperCase()}</span>}
+                </div>
+              )}
             </div>
             <div style={{flex:1}}>
               {editMode?(
