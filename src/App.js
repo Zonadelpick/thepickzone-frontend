@@ -642,7 +642,7 @@ function ProPanelView({ user, addPick, setView, picks }) {
         time: match?.time||"Hoy",
         odds: parseFloat(odds)||1.90,
         bank: parseInt(bank)||10,
-        price: parseInt(price)||10,
+        price: price==="0"||price===0 ? 0 : (parseInt(price)||10),
         ticketImg: imgSrc||null,
       };
       const r = await fetch(BACKEND_URL+"/api/picks",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify(newPick)});
