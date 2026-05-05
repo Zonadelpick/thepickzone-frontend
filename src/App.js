@@ -1004,9 +1004,33 @@ function AdminPanel({ setView, user, picks }) {
                     <div style={{fontSize:"0.72rem",color:"var(--text-dim)"}}>{u.email} · {u.createdAt?new Date(u.createdAt).toLocaleDateString("es-MX"):""}</div>
                   </div>
                 </div>
-                <span style={{fontSize:"0.65rem",fontWeight:900,padding:"3px 10px",borderRadius:100,letterSpacing:1,background:u.role==="pro"?"rgba(29,185,84,0.15)":u.role==="admin"?"rgba(245,197,66,0.15)":"rgba(107,128,120,0.15)",color:u.role==="pro"?"var(--g)":u.role==="admin"?"var(--gold)":"var(--muted)"}}>
-                  {u.role==="pro"?"PRO":u.role==="admin"?"ADMIN":"BÁSICO"}
-                </span>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{fontSize:"0.65rem",fontWeight:900,padding:"3px 10px",borderRadius:100,letterSpacing:1,background:u.role==="pro"?"rgba(29,185,84,0.15)":u.role==="admin"?"rgba(245,197,66,0.15)":"rgba(107,128,120,0.15)",color:u.role==="pro"?"var(--g)":u.role==="admin"?"var(--gold)":"var(--muted)"}}>
+                    {u.role==="pro"?"PRO ⭐":u.role==="admin"?"ADMIN 👑":"BÁSICO"}
+                  </span>
+                  {u.role==="basic" && (
+                    <button onClick={async()=>{
+                      if(!window.confirm("¿Hacer Pro a "+u.name+"?")) return;
+                      const token=localStorage.getItem("tpz_token");
+                      const r=await fetch(BACKEND_URL+"/api/admin/set-role",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({secret:"tpz-setup-2026",email:u.email,role:"pro"})});
+                      if(r.ok){alert(u.name+" ahora es PRO");loadData();}
+                      else alert("Error al cambiar rol");
+                    }} style={{fontSize:"0.65rem",fontWeight:700,padding:"3px 10px",borderRadius:100,background:"rgba(29,185,84,0.1)",border:"1px solid var(--g)",color:"var(--g)",cursor:"pointer"}}>
+                      + Hacer Pro
+                    </button>
+                  )}
+                  {u.role==="pro" && u.email!=="admin@thepickzone.com" && (
+                    <button onClick={async()=>{
+                      if(!window.confirm("¿Quitar Pro a "+u.name+"?")) return;
+                      const token=localStorage.getItem("tpz_token");
+                      const r=await fetch(BACKEND_URL+"/api/admin/set-role",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({secret:"tpz-setup-2026",email:u.email,role:"basic"})});
+                      if(r.ok){alert(u.name+" ahora es BÁSICO");loadData();}
+                      else alert("Error al cambiar rol");
+                    }} style={{fontSize:"0.65rem",fontWeight:700,padding:"3px 10px",borderRadius:100,background:"rgba(244,67,54,0.1)",border:"1px solid #f44336",color:"#f44336",cursor:"pointer"}}>
+                      Quitar Pro
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
