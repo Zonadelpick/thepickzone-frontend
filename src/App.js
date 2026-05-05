@@ -253,7 +253,7 @@ function PurchaseView({ pick, setView, user }) {
   }
 
   async function handleBuy() {
-    if (pick.price === 0 || pick.price === "0") { await loadFullPick(); setStep(2); return; }
+    if (pick.price === 0 || pick.price === "0") { setFullPick(pick); setStep(2); return; }
     setPaying(true); setError("");
     try {
       const token = localStorage.getItem("tpz_token");
