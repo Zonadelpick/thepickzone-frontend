@@ -126,7 +126,7 @@ function NavBar({ view, setView, user, setUser, notifications, setNotifications 
 }
 
 // ── HOME ──────────────────────────────────────────────────────────────────────
-function HomeView({ setView, setPurchaseTarget, picks }) {
+function HomeView({ setView, setPurchaseTarget, picks, setSelectedTipster }) {
   const resolved = picks.filter(p=>p.result==="won"||p.result==="lost");
   const won = picks.filter(p=>p.result==="won").length;
   const winRate = resolved.length > 0 ? Math.round((won/resolved.length)*100) : 0;
@@ -160,7 +160,7 @@ function HomeView({ setView, setPurchaseTarget, picks }) {
           <h2 style={{fontFamily:"'Bebas Neue'",fontSize:"2rem",marginBottom:24}}>Picks <span style={{color:"var(--g)"}}>disponibles</span></h2>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:16}}>
             {picks.filter(p=>!isMatchStarted(p.time)).slice(0,4).map((p,i)=>(
-              <PickCard key={p._id||i} pick={p} setView={setView} setPurchaseTarget={setPurchaseTarget}/>
+              <PickCard key={p._id||i} pick={p} setView={setView} setPurchaseTarget={setPurchaseTarget} setSelectedTipster={setSelectedTipster}/>
             ))}
           </div>
         </section>
@@ -170,7 +170,7 @@ function HomeView({ setView, setPurchaseTarget, picks }) {
 }
 
 // ── PICK CARD ─────────────────────────────────────────────────────────────────
-function PickCard({ pick, setView, setPurchaseTarget }) {
+function PickCard({ pick, setView, setPurchaseTarget, setSelectedTipster }) {
   const started = isMatchStarted(pick.time);
   const timeDisplay = pick.time && (pick.time.includes('T') || pick.time.includes('Z')) ? isoToLocal(pick.time) : pick.time;
 
@@ -193,7 +193,7 @@ function PickCard({ pick, setView, setPurchaseTarget }) {
           <span style={{fontSize:"0.65rem",color:"var(--muted)",letterSpacing:1.5,textTransform:"uppercase"}}>🔒 Contenido exclusivo</span>
         </div>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <div style={{fontSize:"0.82rem",fontWeight:700}}>{pick.tipster}</div>
+          <div onClick={()=>{setSelectedTipster&&setSelectedTipster(pick.tipster);setView("tipster-profile");}} style={{fontSize:"0.82rem",fontWeight:700,cursor:"pointer",color:"var(--g)"}}>{pick.tipster}</div>
           <button onClick={()=>{setPurchaseTarget(pick);setView("purchase");}} style={{background:pick.price===0||pick.price==="0"?"#17a347":"var(--g)",color:"#000",border:"none",padding:"10px 20px",borderRadius:6,fontFamily:"'Barlow Condensed'",fontSize:"0.88rem",fontWeight:900,letterSpacing:1.5,cursor:"pointer"}}>
             {pick.price===0||pick.price==="0"?"🎁 GRATIS":`$${pick.price} USD`}
           </button>
@@ -204,7 +204,7 @@ function PickCard({ pick, setView, setPurchaseTarget }) {
 }
 
 // ── MARKETPLACE ───────────────────────────────────────────────────────────────
-function MarketplaceView({ setView, setPurchaseTarget, picks }) {
+function MarketplaceView({ setView, setPurchaseTarget, picks, setSelectedTipster }) {
   const available = picks.filter(p => !isMatchStarted(p.time));
   return (
     <div style={{paddingTop:80,minHeight:"100vh",padding:"clamp(80px,12vw,100px) 5% 60px"}}>
@@ -219,7 +219,7 @@ function MarketplaceView({ setView, setPurchaseTarget, picks }) {
         </div>
       ) : (
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:16}}>
-          {available.map((p,i)=><PickCard key={p._id||i} pick={p} setView={setView} setPurchaseTarget={setPurchaseTarget}/>)}
+          {available.map((p,i)=><PickCard key={p._id||i} pick={p} setView={setView} setPurchaseTarget={setPurchaseTarget} setSelectedTipster={setSelectedTipster}/>)}
         </div>
       )}
     </div>
@@ -1114,12 +1114,76 @@ function RevenueDashboard({ setView, picks }) {
   );
 }
 
+
+// ── TIPSTER PROFILE ───────────────────────────────────────────────────────────
+function TipsterProfileView({ setView, tipsterName, picks }) {
+  const [tipster, setTipster] = useState(null);
+
+  useEffect(()=>{
+    fetch(BACKEND_URL+"/api/tipsters")
+      .then(r=>r.json())
+      .then(data=>{
+        if(Array.isArray(data)){
+          const t = data.find(u=>u.name===tipsterName);
+          setTipster(t||null);
+        }
+      }).catch(()=>{});
+  },[tipsterName]);
+
+  const myPicks = picks.filter(p=>p.tipster===tipsterName);
+  const won = myPicks.filter(p=>p.result==="won").length;
+  const lost = myPicks.filter(p=>p.result==="lost").length;
+  const winRate = won+lost>0 ? Math.round((won/(won+lost))*100) : 0;
+
+  return (
+    <div style={{paddingTop:80,minHeight:"100vh",padding:"clamp(80px,12vw,100px) 5% 60px"}}>
+      <div style={{maxWidth:600,margin:"0 auto"}}>
+        <button onClick={()=>setView("rankings")} style={{background:"none",border:"none",color:"var(--g)",cursor:"pointer",fontSize:"0.85rem",marginBottom:20}}>← Volver</button>
+        <div style={{background:"var(--d2)",border:"1px solid var(--border)",borderRadius:16,padding:24,marginBottom:20}}>
+          <div style={{display:"flex",alignItems:"center",gap:20,flexWrap:"wrap",marginBottom:20}}>
+            <div style={{width:80,height:80,borderRadius:"50%",background:"var(--d4)",border:"3px solid var(--g)",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",flexShrink:0}}>
+              {tipster?.avatar?<img src={tipster.avatar} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<span style={{fontFamily:"'Bebas Neue'",fontSize:"2rem",color:"var(--g)"}}>{(tipsterName||"T")[0].toUpperCase()}</span>}
+            </div>
+            <div>
+              <h2 style={{fontSize:"1.4rem",fontWeight:700,marginBottom:4}}>{tipsterName}</h2>
+              <span style={{background:"rgba(29,185,84,0.15)",color:"var(--g)",padding:"3px 12px",borderRadius:100,fontSize:"0.72rem",fontWeight:700}}>PRO ⭐ VERIFICADO</span>
+              {tipster?.bio&&<div style={{fontSize:"0.82rem",color:"var(--muted)",marginTop:8}}>{tipster.bio}</div>}
+            </div>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:12}}>
+            {[[tipster?.roi||"+0%","ROI"],[winRate+"%","Win Rate"],[myPicks.length,"Picks totales"],[won,"Ganados"],[lost,"Perdidos"]].map(([v,l])=>(
+              <div key={l} style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:"14px 12px",textAlign:"center"}}>
+                <div style={{fontFamily:"'Bebas Neue'",fontSize:"1.6rem",color:"var(--g)",lineHeight:1}}>{v}</div>
+                <div style={{fontSize:"0.62rem",color:"var(--muted)",letterSpacing:1,marginTop:3}}>{l}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <h3 style={{fontFamily:"'Bebas Neue'",fontSize:"1.4rem",marginBottom:16}}>Picks <span style={{color:"var(--g)"}}>Recientes</span></h3>
+        {myPicks.length===0 ? (
+          <div style={{textAlign:"center",color:"var(--muted)",padding:40}}>No hay picks disponibles</div>
+        ) : myPicks.slice(0,10).map((p,i)=>(
+          <div key={i} style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:"14px 16px",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div>
+              <div style={{fontWeight:700,fontSize:"0.9rem"}}>{p.match}</div>
+              <div style={{fontSize:"0.72rem",color:"var(--muted)",marginTop:2}}>{p.league} · Momio {p.odds}</div>
+            </div>
+            <span style={{padding:"4px 10px",borderRadius:6,fontSize:"0.72rem",fontWeight:700,background:p.result==="won"?"rgba(29,185,84,0.15)":p.result==="lost"?"rgba(244,67,54,0.15)":"rgba(107,128,120,0.15)",color:p.result==="won"?"var(--g)":p.result==="lost"?"#f44336":"var(--muted)"}}>
+              {p.result==="won"?"GANADO":p.result==="lost"?"PERDIDO":p.result==="void"?"VOID":"PENDIENTE"}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 // ── APP ───────────────────────────────────────────────────────────────────────
 export default function App() {
   const [view, setView] = useState("home");
   const [user, setUser] = useState(null);
   const [picks, setPicks] = useState([]);
   const [purchaseTarget, setPurchaseTarget] = useState(null);
+  const [selectedTipster, setSelectedTipster] = useState(null);
   const [notifications, setNotifications] = useState([]);
 
   // Restore session
@@ -1150,8 +1214,8 @@ export default function App() {
     <>
       <style>{G}</style>
       <NavBar view={view} setView={gotoView} user={user} setUser={setUser} notifications={notifications} setNotifications={setNotifications}/>
-      {view==="home"             && <HomeView        setView={gotoView} setPurchaseTarget={setPurchaseTarget} picks={picks}/>}
-      {view==="marketplace"      && <MarketplaceView setView={gotoView} setPurchaseTarget={setPurchaseTarget} picks={picks}/>}
+      {view==="home"             && <HomeView        setView={gotoView} setPurchaseTarget={setPurchaseTarget} picks={picks} setSelectedTipster={setSelectedTipster}/>}
+      {view==="marketplace"      && <MarketplaceView setView={gotoView} setPurchaseTarget={setPurchaseTarget} picks={picks} setSelectedTipster={setSelectedTipster}/>}
       {view==="purchase"         && <PurchaseView    pick={purchaseTarget} setView={gotoView} user={user}/>}
       {view==="rankings"         && <RankingsView    setView={gotoView} picks={picks}/>}
       {view==="login"            && <AuthView        setView={gotoView} setUser={setUser} mode="login"/>}
@@ -1161,6 +1225,7 @@ export default function App() {
       {view==="pro-panel"        && <ProPanelView    user={user} addPick={addPick} setView={gotoView} picks={picks}/>}
       {view==="admin-panel"      && <AdminPanel      setView={gotoView} user={user} picks={picks}/>}
       {view==="revenue-dashboard"&& <RevenueDashboard setView={gotoView} picks={picks}/>}
+      {view==="tipster-profile"   && <TipsterProfileView setView={gotoView} tipsterName={selectedTipster} picks={picks}/>}
       <footer style={{background:"var(--dark)",borderTop:"1px solid var(--border)",padding:"40px 5%",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:20}}>
         <div style={{fontFamily:"'Bebas Neue'",fontSize:"1.2rem",letterSpacing:2,color:"var(--g)"}}>THE PICK ZONE</div>
         <div style={{display:"flex",gap:20}}>{["Términos","Privacidad","Soporte"].map(l=><a key={l} href="#" style={{color:"var(--muted)",fontSize:"0.8rem",textDecoration:"none"}}>{l}</a>)}</div>
