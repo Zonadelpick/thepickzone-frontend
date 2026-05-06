@@ -253,7 +253,15 @@ function PurchaseView({ pick, setView, user }) {
   }
 
   async function handleBuy() {
-    if (pick.price === 0 || pick.price === "0") { setFullPick(pick); setStep(2); return; }
+    if (pick.price === 0 || pick.price === "0") {
+      try {
+        const token = localStorage.getItem("tpz_token");
+        const r = await fetch(BACKEND_URL+"/api/picks/"+pick._id+"/full",{headers:{"Authorization":"Bearer "+token}});
+        if(r.ok){ const data = await r.json(); setFullPick(data); }
+        else setFullPick(pick);
+      } catch(e){ setFullPick(pick); }
+      setStep(2); return;
+    }
     setPaying(true); setError("");
     try {
       const token = localStorage.getItem("tpz_token");
