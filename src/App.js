@@ -231,6 +231,10 @@ function PurchaseView({ pick, setView, user }) {
   const [step, setStep] = useState(1);
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState("");
+  const [cardNumber, setCardNumber] = useState("");
+  const [expiry, setExpiry] = useState("");
+  const [cvv, setCvv] = useState("");
+  const [unlockedPick, setUnlockedPick] = useState(null);
 
   if (!pick) { setView("marketplace"); return null; }
   if (!user) return (
@@ -256,11 +260,11 @@ function PurchaseView({ pick, setView, user }) {
     if (pick.price === 0 || pick.price === "0") {
       try {
         const token = localStorage.getItem("tpz_token");
-        const r = await fetch(BACKEND_URL+"/api/picks/"+pick._id+"/full",{headers:{"Authorization":"Bearer "+token}});
-        if(r.ok){ const data = await r.json(); setFullPick(data); }
-        else setFullPick(pick);
-      } catch(e){ setFullPick(pick); }
-      setStep(2); return;
+        const r = await fetch(BACKEND_URL+"/api/stripe/create-payment-intent",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({pickId:pick._id})});
+        const data = await r.json();
+        if(data.free){setUnlockedPick(data.pick||pick);setStep(2);}
+      } catch(e){ setError("Error al desbloquear"); }
+      return;
     }
     setPaying(true); setError("");
     try {
@@ -283,6 +287,53 @@ function PurchaseView({ pick, setView, user }) {
     } catch(e) { setError("Error de conexión"); setPaying(false); }
   }
 
+  async function payWithCard() {
+    if(!cardNumber||!expiry||!cvv){setError('Completa todos los campos');return;}
+    setPaying(true); setError('');
+    try {
+      const token = localStorage.getItem('tpz_token');
+      const r = await fetch(BACKEND_URL+'/api/stripe/create-payment-intent',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({pickId:pick._id})});
+      const data = await r.json();
+      if(!r.ok){setError(data.error||'Error');setPaying(false);return;}
+      const cr = await fetch(BACKEND_URL+'/api/stripe/confirm-payment',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({paymentIntentId:data.clientSecret.split('_secret_')[0],pickId:pick._id})});
+      const cd = await cr.json();
+      if(cr.ok&&cd.success){setUnlockedPick(cd.pick);setStep(2);}
+      else setError(cd.error||'Pago no completado');
+    }catch(e){setError('Error de conexion');}
+    setPaying(false);
+  }
+  if(step==='card') return (
+    <div style={{paddingTop:80,minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:'clamp(80px,12vw,100px) 5% 60px'}}>
+      <div style={{maxWidth:440,width:'100%',animation:'popIn .4s ease'}}>
+        <div style={{background:'var(--d2)',border:'1px solid rgba(29,185,84,0.3)',borderRadius:20,padding:28}}>
+          <div style={{textAlign:'center',marginBottom:24}}>
+            <div style={{fontSize:'0.68rem',color:'var(--g)',letterSpacing:3,fontWeight:700,marginBottom:8}}>PAGO SEGURO CON TARJETA</div>
+            <h2 style={{fontFamily:"'Bebas Neue'",fontSize:'1.8rem'}}>{'Pagar $'+pick.price+' USD'}</h2>
+            <p style={{color:'var(--muted)',fontSize:'0.82rem',marginTop:4}}>{pick.match}</p>
+          </div>
+          <div style={{marginBottom:12}}>
+            <div style={{fontSize:'0.72rem',color:'var(--muted)',marginBottom:6}}>Numero de tarjeta</div>
+            <input value={cardNumber} onChange={e=>setCardNumber(e.target.value.replace(/\D/g,'').slice(0,16))} placeholder='4242 4242 4242 4242' style={{width:'100%',background:'var(--d4)',border:'1px solid var(--border)',borderRadius:8,padding:'12px 14px',color:'var(--text)',fontSize:'1rem',outline:'none',boxSizing:'border-box'}}/>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:20}}>
+            <div>
+              <div style={{fontSize:'0.72rem',color:'var(--muted)',marginBottom:6}}>Vencimiento</div>
+              <input value={expiry} onChange={e=>setExpiry(e.target.value)} placeholder='MM/AA' style={{width:'100%',background:'var(--d4)',border:'1px solid var(--border)',borderRadius:8,padding:'12px 14px',color:'var(--text)',fontSize:'1rem',outline:'none',boxSizing:'border-box'}}/>
+            </div>
+            <div>
+              <div style={{fontSize:'0.72rem',color:'var(--muted)',marginBottom:6}}>CVV</div>
+              <input value={cvv} onChange={e=>setCvv(e.target.value.slice(0,4))} placeholder='123' style={{width:'100%',background:'var(--d4)',border:'1px solid var(--border)',borderRadius:8,padding:'12px 14px',color:'var(--text)',fontSize:'1rem',outline:'none',boxSizing:'border-box'}}/>
+            </div>
+          </div>
+          {error&&<div style={{background:'rgba(244,67,54,0.1)',border:'1px solid #f44336',color:'#f44336',padding:'8px 12px',borderRadius:6,marginBottom:12,fontSize:'0.8rem'}}>{error}</div>}
+          <button onClick={payWithCard} disabled={paying} style={{width:'100%',background:paying?'var(--d4)':'var(--g)',color:paying?'var(--muted)':'#000',border:'none',padding:15,borderRadius:8,fontFamily:"'Barlow Condensed'",fontSize:'1.1rem',fontWeight:900,letterSpacing:2,cursor:'pointer',marginBottom:10}}>
+            {paying?'Procesando...':'PAGAR $'+pick.price+' USD'}
+          </button>
+          <button onClick={()=>setStep(1)} style={{width:'100%',background:'none',border:'none',color:'var(--muted)',fontSize:'0.8rem',cursor:'pointer'}}>Volver</button>
+        </div>
+      </div>
+    </div>
+  );
   if (step === 2) return (
     <div style={{paddingTop:80,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:"clamp(80px,12vw,100px) 5% 60px"}}>
       <div style={{maxWidth:440,width:"100%",animation:"popIn .4s ease",textAlign:"center"}}>
