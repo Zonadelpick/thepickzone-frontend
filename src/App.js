@@ -228,13 +228,13 @@ function MarketplaceView({ setView, setPurchaseTarget, picks, setSelectedTipster
 
 // ── PURCHASE VIEW ─────────────────────────────────────────────────────────────
 function PurchaseView({ pick, setView, user }) {
-  const [step, setStep] = useState(1);
-  const [paying, setPaying] = useState(false);
-  const [error, setError] = useState("");
-  const [cardNumber, setCardNumber] = useState("");
-  const [expiry, setExpiry] = useState("");
-  const [cvv, setCvv] = useState("");
-  const [unlockedPick, setUnlockedPick] = useState(null);
+  const [step, setStep] = React.useState(1);
+  const [paying, setPaying] = React.useState(false);
+  const [error, setError] = React.useState("");
+  const [cardNumber, setCardNumber] = React.useState("");
+  const [expiry, setExpiry] = React.useState("");
+  const [cvv, setCvv] = React.useState("");
+  const [unlockedPick, setUnlockedPick] = React.useState(null);
 
   if (!pick) { setView("marketplace"); return null; }
   if (!user) return (
@@ -246,94 +246,82 @@ function PurchaseView({ pick, setView, user }) {
 
   const timeDisplay = pick.time && (pick.time.includes('T') || pick.time.includes('Z')) ? isoToLocal(pick.time) : pick.time;
 
-  const [fullPick, setFullPick] = React.useState(pick);
-
-  async function loadFullPick() {
-    try {
-      const token = localStorage.getItem("tpz_token");
-      const r = await fetch(BACKEND_URL+"/api/picks/"+pick._id+"/full",{headers:{"Authorization":"Bearer "+token}});
-      if(r.ok){ const data = await r.json(); setFullPick(data); }
-    } catch(e){}
-  }
-
   async function handleBuy() {
     if (pick.price === 0 || pick.price === "0") {
+      setPaying(true);
       try {
         const token = localStorage.getItem("tpz_token");
         const r = await fetch(BACKEND_URL+"/api/stripe/create-payment-intent",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({pickId:pick._id})});
         const data = await r.json();
-        if(data.free){setUnlockedPick(data.pick||pick);setStep(2);}
+        if(data.free){
+          const pr = await fetch(BACKEND_URL+"/api/picks/"+pick._id+"/full",{headers:{"Authorization":"Bearer "+token}});
+          const fullP = pr.ok ? await pr.json() : pick;
+          setUnlockedPick(fullP);
+          setStep(2);
+        }
       } catch(e){ setError("Error al desbloquear"); }
+      setPaying(false);
       return;
     }
     setStep("card");
   }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   async function payWithCard() {
-    if(!cardNumber||!expiry||!cvv){setError('Completa todos los campos');return;}
-    setPaying(true); setError('');
+    if(!cardNumber||!expiry||!cvv){setError("Completa todos los campos");return;}
+    setPaying(true); setError("");
     try {
-      const token = localStorage.getItem('tpz_token');
-      const r = await fetch(BACKEND_URL+'/api/stripe/create-payment-intent',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({pickId:pick._id})});
+      const token = localStorage.getItem("tpz_token");
+      const r = await fetch(BACKEND_URL+"/api/stripe/create-payment-intent",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({pickId:pick._id})});
       const data = await r.json();
-      if(!r.ok){setError(data.error||'Error');setPaying(false);return;}
-      const cr = await fetch(BACKEND_URL+'/api/stripe/confirm-payment',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({paymentIntentId:data.clientSecret.split('_secret_')[0],pickId:pick._id})});
+      if(!r.ok){setError(data.error||"Error");setPaying(false);return;}
+      const stripeLib = await import("@stripe/stripe-js");
+      const stripe = await stripeLib.loadStripe("pk_test_51TQpsB2NnQpZZGi88jDYyKtPqzUe2VyXNSP9pu4dgsT25X3F6umZj726RLisiJNExDPWriVvhAtl3zxO2lQQGErB00XB44Jq6J");
+      const parts = expiry.split("/");
+      const pm = await stripe.createPaymentMethod({type:"card",card:{number:cardNumber,exp_month:parseInt(parts[0]),exp_year:parseInt("20"+(parts[1]||"26")),cvc:cvv}});
+      if(pm.error){setError(pm.error.message);setPaying(false);return;}
+      const conf = await stripe.confirmCardPayment(data.clientSecret,{payment_method:pm.paymentMethod.id});
+      if(conf.error){setError(conf.error.message);setPaying(false);return;}
+      const cr = await fetch(BACKEND_URL+"/api/stripe/confirm-payment",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({paymentIntentId:conf.paymentIntent.id,pickId:pick._id})});
       const cd = await cr.json();
       if(cr.ok&&cd.success){setUnlockedPick(cd.pick);setStep(2);}
-      else setError(cd.error||'Pago no completado');
-    }catch(e){setError('Error de conexion');}
+      else setError(cd.error||"Pago no completado");
+    }catch(e){setError("Error: "+e.message);}
     setPaying(false);
   }
-  if(step==='card') return (
-    <div style={{paddingTop:80,minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:'clamp(80px,12vw,100px) 5% 60px'}}>
-      <div style={{maxWidth:440,width:'100%',animation:'popIn .4s ease'}}>
-        <div style={{background:'var(--d2)',border:'1px solid rgba(29,185,84,0.3)',borderRadius:20,padding:28}}>
-          <div style={{textAlign:'center',marginBottom:24}}>
-            <div style={{fontSize:'0.68rem',color:'var(--g)',letterSpacing:3,fontWeight:700,marginBottom:8}}>PAGO SEGURO CON TARJETA</div>
-            <h2 style={{fontFamily:"'Bebas Neue'",fontSize:'1.8rem'}}>{'Pagar $'+pick.price+' USD'}</h2>
-            <p style={{color:'var(--muted)',fontSize:'0.82rem',marginTop:4}}>{pick.match}</p>
+
+  if(step==="card") return (
+    <div style={{paddingTop:80,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:"clamp(80px,12vw,100px) 5% 60px"}}>
+      <div style={{maxWidth:440,width:"100%",animation:"popIn .4s ease"}}>
+        <div style={{background:"var(--d2)",border:"1px solid rgba(29,185,84,0.3)",borderRadius:20,padding:28}}>
+          <div style={{textAlign:"center",marginBottom:24}}>
+            <div style={{fontSize:"0.68rem",color:"var(--g)",letterSpacing:3,fontWeight:700,marginBottom:8}}>PAGO SEGURO CON TARJETA</div>
+            <h2 style={{fontFamily:"'Bebas Neue'",fontSize:"1.8rem"}}>{"Pagar $"+pick.price+" USD"}</h2>
+            <p style={{color:"var(--muted)",fontSize:"0.82rem",marginTop:4}}>{pick.match}</p>
           </div>
           <div style={{marginBottom:12}}>
-            <div style={{fontSize:'0.72rem',color:'var(--muted)',marginBottom:6}}>Numero de tarjeta</div>
-            <input value={cardNumber} onChange={e=>setCardNumber(e.target.value.replace(/\D/g,'').slice(0,16))} placeholder='4242 4242 4242 4242' style={{width:'100%',background:'var(--d4)',border:'1px solid var(--border)',borderRadius:8,padding:'12px 14px',color:'var(--text)',fontSize:'1rem',outline:'none',boxSizing:'border-box'}}/>
+            <div style={{fontSize:"0.72rem",color:"var(--muted)",marginBottom:6}}>Número de tarjeta</div>
+            <input value={cardNumber} onChange={e=>setCardNumber(e.target.value.replace(/\D/g,"").slice(0,16))} placeholder="4242 4242 4242 4242" style={{width:"100%",background:"var(--d4)",border:"1px solid var(--border)",borderRadius:8,padding:"12px 14px",color:"var(--text)",fontSize:"1rem",outline:"none",boxSizing:"border-box"}}/>
           </div>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:20}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:20}}>
             <div>
-              <div style={{fontSize:'0.72rem',color:'var(--muted)',marginBottom:6}}>Vencimiento</div>
-              <input value={expiry} onChange={e=>setExpiry(e.target.value)} placeholder='MM/AA' style={{width:'100%',background:'var(--d4)',border:'1px solid var(--border)',borderRadius:8,padding:'12px 14px',color:'var(--text)',fontSize:'1rem',outline:'none',boxSizing:'border-box'}}/>
+              <div style={{fontSize:"0.72rem",color:"var(--muted)",marginBottom:6}}>Vencimiento</div>
+              <input value={expiry} onChange={e=>setExpiry(e.target.value)} placeholder="MM/AA" style={{width:"100%",background:"var(--d4)",border:"1px solid var(--border)",borderRadius:8,padding:"12px 14px",color:"var(--text)",fontSize:"1rem",outline:"none",boxSizing:"border-box"}}/>
             </div>
             <div>
-              <div style={{fontSize:'0.72rem',color:'var(--muted)',marginBottom:6}}>CVV</div>
-              <input value={cvv} onChange={e=>setCvv(e.target.value.slice(0,4))} placeholder='123' style={{width:'100%',background:'var(--d4)',border:'1px solid var(--border)',borderRadius:8,padding:'12px 14px',color:'var(--text)',fontSize:'1rem',outline:'none',boxSizing:'border-box'}}/>
+              <div style={{fontSize:"0.72rem",color:"var(--muted)",marginBottom:6}}>CVV</div>
+              <input value={cvv} onChange={e=>setCvv(e.target.value.slice(0,4))} placeholder="123" style={{width:"100%",background:"var(--d4)",border:"1px solid var(--border)",borderRadius:8,padding:"12px 14px",color:"var(--text)",fontSize:"1rem",outline:"none",boxSizing:"border-box"}}/>
             </div>
           </div>
-          {error&&<div style={{background:'rgba(244,67,54,0.1)',border:'1px solid #f44336',color:'#f44336',padding:'8px 12px',borderRadius:6,marginBottom:12,fontSize:'0.8rem'}}>{error}</div>}
-          <button onClick={payWithCard} disabled={paying} style={{width:'100%',background:paying?'var(--d4)':'var(--g)',color:paying?'var(--muted)':'#000',border:'none',padding:15,borderRadius:8,fontFamily:"'Barlow Condensed'",fontSize:'1.1rem',fontWeight:900,letterSpacing:2,cursor:'pointer',marginBottom:10}}>
-            {paying?'Procesando...':'PAGAR $'+pick.price+' USD'}
+          {error&&<div style={{background:"rgba(244,67,54,0.1)",border:"1px solid #f44336",color:"#f44336",padding:"8px 12px",borderRadius:6,marginBottom:12,fontSize:"0.8rem"}}>{error}</div>}
+          <button onClick={payWithCard} disabled={paying} style={{width:"100%",background:paying?"var(--d4)":"var(--g)",color:paying?"var(--muted)":"#000",border:"none",padding:15,borderRadius:8,fontFamily:"'Barlow Condensed'",fontSize:"1.1rem",fontWeight:900,letterSpacing:2,cursor:"pointer",marginBottom:10}}>
+            {paying?"Procesando...":"PAGAR $"+pick.price+" USD"}
           </button>
-          <button onClick={()=>setStep(1)} style={{width:'100%',background:'none',border:'none',color:'var(--muted)',fontSize:'0.8rem',cursor:'pointer'}}>Volver</button>
+          <button onClick={()=>setStep(1)} style={{width:"100%",background:"none",border:"none",color:"var(--muted)",fontSize:"0.8rem",cursor:"pointer"}}>← Volver</button>
         </div>
       </div>
     </div>
   );
+
   if (step === 2) return (
     <div style={{paddingTop:80,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:"clamp(80px,12vw,100px) 5% 60px"}}>
       <div style={{maxWidth:440,width:"100%",animation:"popIn .4s ease",textAlign:"center"}}>
@@ -342,8 +330,8 @@ function PurchaseView({ pick, setView, user }) {
         <p style={{color:"var(--muted)",marginBottom:24}}>{pick.match}</p>
         <div style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:12,padding:20,marginBottom:20,textAlign:"left"}}>
           <div style={{fontSize:"0.7rem",color:"var(--g)",letterSpacing:2,fontWeight:700,marginBottom:12}}>🔓 CONTENIDO DESBLOQUEADO</div>
-          {fullPick.ticketImg ? (
-            <img src={fullPick.ticketImg} alt="Ticket" style={{width:"100%",borderRadius:8}}/>
+          {unlockedPick?.ticketImg ? (
+            <img src={unlockedPick.ticketImg} alt="Ticket" style={{width:"100%",borderRadius:8}}/>
           ) : (
             <div style={{textAlign:"center",color:"var(--muted)",padding:20}}>Ticket no disponible</div>
           )}
@@ -365,9 +353,9 @@ function PurchaseView({ pick, setView, user }) {
             <div style={{fontSize:"0.75rem",color:"var(--muted)",marginTop:4}}>{timeDisplay} · {pick.league}</div>
           </div>
           <div style={{display:"flex",borderBottom:"1px solid var(--border)"}}>
-            {[["$"+pick.price+" USD","Precio","var(--gold)"],[""+pick.odds,"Momio","var(--g)"],[pick.bank+"%","Bank","var(--text)"]].map(([v,l,c],i)=>(
+            {[["$"+pick.price+" USD","Precio","var(--gold)"],[""+pick.odds,"Momio","var(--g)"],[pick.bank+"%","Bank","var(--text)"]].map(([v,l,col],i)=>(
               <div key={l} style={{flex:1,padding:"14px 8px",textAlign:"center",borderRight:i<2?"1px solid var(--border)":"none"}}>
-                <div style={{fontFamily:"'Bebas Neue'",fontSize:"1.4rem",color:c}}>{v}</div>
+                <div style={{fontFamily:"'Bebas Neue'",fontSize:"1.4rem",color:col}}>{v}</div>
                 <div style={{fontSize:"0.65rem",color:"var(--muted)",letterSpacing:1}}>{l}</div>
               </div>
             ))}
@@ -376,7 +364,6 @@ function PurchaseView({ pick, setView, user }) {
             <div style={{background:"var(--d4)",borderRadius:8,padding:"20px",textAlign:"center",border:"1px dashed rgba(29,185,84,0.2)"}}>
               <span style={{fontSize:"1.5rem"}}>🔒</span>
               <div style={{fontSize:"0.65rem",color:"var(--muted)",letterSpacing:1.5,marginTop:6}}>CONTENIDO EXCLUSIVO</div>
-              <div style={{fontSize:"0.62rem",color:"rgba(107,128,120,0.6)",marginTop:4}}>Disponible tras la compra</div>
             </div>
           </div>
           <div style={{padding:"14px 24px",display:"flex",alignItems:"center",gap:12,borderBottom:"1px solid var(--border)"}}>
@@ -389,7 +376,7 @@ function PurchaseView({ pick, setView, user }) {
           <div style={{padding:20}}>
             {error && <div style={{background:"rgba(244,67,54,0.1)",border:"1px solid #f44336",color:"#f44336",padding:"8px 12px",borderRadius:6,marginBottom:12,fontSize:"0.8rem"}}>{error}</div>}
             <button onClick={handleBuy} disabled={paying} style={{width:"100%",background:paying?"var(--d4)":"var(--g)",color:paying?"var(--muted)":"#000",border:"none",padding:15,borderRadius:8,fontFamily:"'Barlow Condensed'",fontSize:"1.1rem",fontWeight:900,letterSpacing:2,cursor:"pointer"}}>
-              {paying?"Procesando...":pick.price===0||pick.price==="0"?"OBTENER GRATIS":"COMPRAR - $"+pick.price+" USD"}
+              {paying?"Procesando...":pick.price===0||pick.price==="0"?"🎁 OBTENER GRATIS":"💳 PAGAR CON TARJETA - $"+pick.price+" USD"}
             </button>
             <div style={{textAlign:"center",fontSize:"0.72rem",color:"var(--muted)",marginTop:10}}>🔒 Pago seguro · Acceso inmediato</div>
           </div>
