@@ -266,26 +266,26 @@ function PurchaseView({ pick, setView, user }) {
       } catch(e){ setError("Error al desbloquear"); }
       return;
     }
-    setPaying(true); setError("");
-    try {
-      const token = localStorage.getItem("tpz_token");
-      const r = await fetch(BACKEND_URL+"/api/paypal/create-order", {
-        method:"POST", headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},
-        body: JSON.stringify({ amount: pick.price, description: "Pick: "+pick.match })
-      });
-      const data = await r.json();
-      if (!r.ok) { setError(data.error||"Error"); setPaying(false); return; }
-      const orderId = data.orderId;
-      const paypalWin = window.open("https://www.paypal.com/checkoutnow?token="+orderId,"_blank","width=500,height=600");
-      const interval = setInterval(async()=>{
-        try {
-          const cr = await fetch(BACKEND_URL+"/api/paypal/capture-order",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({orderId})});
-          if(cr.ok){clearInterval(interval);if(paypalWin)paypalWin.close();setStep(2);setPaying(false);}
-        }catch(e){}
-      },3000);
-      setTimeout(()=>{clearInterval(interval);setPaying(false);},120000);
-    } catch(e) { setError("Error de conexión"); setPaying(false); }
+    setStep("card");
   }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   async function payWithCard() {
     if(!cardNumber||!expiry||!cvv){setError('Completa todos los campos');return;}
