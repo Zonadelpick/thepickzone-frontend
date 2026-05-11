@@ -56,39 +56,22 @@ function clearCheckoutQueryParams() {
   }
 }
 
-// ── LEAGUES ───────────────────────────────────────────────────────────────────
-const ALL_LEAGUES = [
-  {id:1,  name:"Liga MX",              flag:"🇲🇽", sport:"⚽", country:"México"},
-  {id:2,  name:"Premier League",       flag:"🏴󠁧󠁢󠁥󠁮󠁧󠁿", sport:"⚽", country:"Inglaterra"},
-  {id:3,  name:"La Liga",              flag:"🇪🇸", sport:"⚽", country:"España"},
-  {id:4,  name:"Bundesliga",           flag:"🇩🇪", sport:"⚽", country:"Alemania"},
-  {id:5,  name:"Serie A",              flag:"🇮🇹", sport:"⚽", country:"Italia"},
-  {id:6,  name:"Ligue 1",              flag:"🇫🇷", sport:"⚽", country:"Francia"},
-  {id:7,  name:"Champions League",     flag:"🌍", sport:"⚽", country:"Europa"},
-  {id:8,  name:"Europa League",        flag:"🌍", sport:"⚽", country:"Europa"},
-  {id:9,  name:"Copa Libertadores",    flag:"🌎", sport:"⚽", country:"Sudamérica"},
-  {id:10, name:"Copa Sudamericana",    flag:"🌎", sport:"⚽", country:"Sudamérica"},
-  {id:11, name:"MLS",                  flag:"🇺🇸", sport:"⚽", country:"EE.UU."},
-  {id:12, name:"NBA",                  flag:"🇺🇸", sport:"🏀", country:"EE.UU."},
-  {id:13, name:"NFL",                  flag:"🇺🇸", sport:"🏈", country:"EE.UU."},
-  {id:14, name:"MLB",                  flag:"🇺🇸", sport:"⚾", country:"EE.UU."},
-  {id:15, name:"NHL",                  flag:"🇺🇸", sport:"🏒", country:"EE.UU."},
-  {id:16, name:"Liga Argentina",       flag:"🇦🇷", sport:"⚽", country:"Argentina"},
-  {id:17, name:"Brasileirão Serie A",  flag:"🇧🇷", sport:"⚽", country:"Brasil"},
-  {id:18, name:"Liga Chile",           flag:"🇨🇱", sport:"⚽", country:"Chile"},
-  {id:19, name:"Saudi Pro League",     flag:"🇸🇦", sport:"⚽", country:"Arabia Saudita"},
-  {id:20, name:"Eredivisie",           flag:"🇳🇱", sport:"⚽", country:"Holanda"},
-  {id:21, name:"Scottish Premiership", flag:"🏴󠁧󠁢󠁳󠁣󠁴󠁿", sport:"⚽", country:"Escocia"},
-  {id:22, name:"Allsvenskan",          flag:"🇸🇪", sport:"⚽", country:"Suecia"},
-  {id:23, name:"Eliteserien",          flag:"🇳🇴", sport:"⚽", country:"Noruega"},
-  {id:24, name:"Ekstraklasa",          flag:"🇵🇱", sport:"⚽", country:"Polonia"},
-  {id:25, name:"J1 League",            flag:"🇯🇵", sport:"⚽", country:"Japón"},
-  {id:26, name:"K League 1",           flag:"🇰🇷", sport:"⚽", country:"Corea"},
-  {id:27, name:"FA Cup",               flag:"🏴󠁧󠁢󠁥󠁮󠁧󠁿", sport:"⚽", country:"Inglaterra"},
-  {id:28, name:"FIFA World Cup",       flag:"🌍", sport:"⚽", country:"Mundial"},
-  {id:29, name:"Copa América",         flag:"🌎", sport:"⚽", country:"Sudamérica"},
-  {id:30, name:"WNBA",                 flag:"🇺🇸", sport:"🏀", country:"EE.UU."},
-];
+function inferSportEmojiFromOdds(group, key, title) {
+  const source = `${group || ""} ${key || ""} ${title || ""}`.toLowerCase();
+  if (source.includes("soccer") || source.includes("futbol")) return "⚽";
+  if (source.includes("basketball")) return "🏀";
+  if (source.includes("americanfootball") || source.includes("nfl")) return "🏈";
+  if (source.includes("baseball")) return "⚾";
+  if (source.includes("icehockey") || source.includes("hockey")) return "🏒";
+  if (source.includes("tennis")) return "🎾";
+  if (source.includes("boxing") || source.includes("mma")) return "🥊";
+  if (source.includes("golf")) return "⛳";
+  if (source.includes("cricket")) return "🏏";
+  if (source.includes("rugby")) return "🏉";
+  if (source.includes("esports")) return "🎮";
+  return "🏅";
+}
+
 
 // ── NAVBAR ────────────────────────────────────────────────────────────────────
 function NavBar({ view, setView, user, setUser, notifications, setNotifications }) {
@@ -781,6 +764,9 @@ function ProPanelView({ user, addPick, setView, picks }) {
   const [leagueSearch, setLeagueSearch] = useState("");
   const [liveMatches, setLiveMatches] = useState(null);
   const [loadingMatches, setLoadingMatches] = useState(false);
+  const [oddsSports, setOddsSports] = useState([]);
+  const [loadingSports, setLoadingSports] = useState(false);
+  const [sportsError, setSportsError] = useState("");
 
   const myPicks = picks.filter(p=>p.tipster===user?.name);
   const wonPicks = myPicks.filter(p=>p.result==="won");
@@ -791,14 +777,56 @@ function ProPanelView({ user, addPick, setView, picks }) {
   const todayCount = parseInt(localStorage.getItem(todayKey)||"0");
   const remaining = Math.max(0, 3-todayCount);
 
+  useEffect(()=>{
+    if (screen !== "step1") return;
+    if (loadingSports || oddsSports.length > 0 || sportsError) return;
+    let mounted = true;
+    async function loadSports() {
+      setLoadingSports(true);
+      setSportsError("");
+      try {
+        const r = await fetch(BACKEND_URL+"/api/fixtures/sports?all=true");
+        const data = await r.json();
+        if (!r.ok || !Array.isArray(data)) throw new Error("No se pudo cargar catálogo de ligas");
+        const dedup = new Map();
+        data.forEach((sport, idx)=>{
+          if(!sport?.key) return;
+          if(dedup.has(sport.key)) return;
+          const title = sport.title || sport.description || sport.key;
+          dedup.set(sport.key, {
+            id: `${sport.key}-${idx}`,
+            key: sport.key,
+            title,
+            name: title,
+            sport: inferSportEmojiFromOdds(sport.group, sport.key, title),
+            group: sport.group || "otros",
+            country: sport.group || "Global",
+            flag: "🌍",
+          });
+        });
+        const mapped = Array.from(dedup.values()).sort((a,b)=>a.name.localeCompare(b.name, "es", { sensitivity: "base" }));
+        if (mounted) setOddsSports(mapped);
+      } catch (e) {
+        if (mounted) setSportsError(e.message || "Error cargando ligas");
+      } finally {
+        if (mounted) setLoadingSports(false);
+      }
+    }
+    loadSports();
+    return ()=>{ mounted = false; };
+  },[screen,loadingSports,oddsSports.length,sportsError]);
+
   async function fetchMatches(leagueObj) {
+    if(!leagueObj?.key){setLiveMatches([]);return;}
     setLoadingMatches(true); setLiveMatches(null);
     try {
-      const r = await fetch(BACKEND_URL+"/api/fixtures/odds?league="+encodeURIComponent(leagueObj.name));
+      const r = await fetch(BACKEND_URL+"/api/fixtures/odds?sportKey="+encodeURIComponent(leagueObj.key));
       if(r.ok){
         const data = await r.json();
         if(Array.isArray(data)&&data.length>0){
-          const matches = data.map(m=>({id:m.id,home:m.home,away:m.away,time:isoToLocal(m.time)})).filter(m=>!isMatchStarted(m.time));
+          const matches = data
+            .map(m=>({id:m.id,home:m.home,away:m.away,timeRaw:m.time,time:isoToLocal(m.time)}))
+            .filter(m=>!isMatchStarted(m.timeRaw||m.time));
           setLiveMatches(matches);
           setLoadingMatches(false);
           return;
@@ -824,10 +852,11 @@ function ProPanelView({ user, addPick, setView, picks }) {
         roi: user?.roi||"+0%",
         verified: true,
         league: league?.name||"Liga",
+        sportKey: league?.key||null,
         sport: league?.sport||"",
         flag: league?.flag||"",
         match: match?(match.home+" vs "+match.away):"Partido",
-        time: match?.time||"Hoy",
+        time: match?.timeRaw||match?.time||"Hoy",
         odds: parseFloat(odds)||1.90,
         bank: parseInt(bank)||10,
         price: price==="0"||price===0 ? 0 : (parseInt(price)||10),
@@ -843,7 +872,12 @@ function ProPanelView({ user, addPick, setView, picks }) {
     }catch(e){alert("Error de conexión al publicar");setPublishing(false);}
   }
 
-  const filteredLeagues = leagueSearch.length>=2 ? ALL_LEAGUES.filter(l=>l.name.toLowerCase().includes(leagueSearch.toLowerCase())||l.country.toLowerCase().includes(leagueSearch.toLowerCase())).slice(0,20) : [];
+  const query = leagueSearch.trim().toLowerCase();
+  const filteredLeagues = query.length>=2
+    ? oddsSports.filter((l)=>
+        [l.name,l.title,l.group,l.country,l.key].some((f)=>String(f||"").toLowerCase().includes(query))
+      ).slice(0,40)
+    : [];
 
   if(screen==="dashboard") return (
     <div style={{paddingTop:80,minHeight:"100vh",padding:"clamp(80px,12vw,100px) 5% 60px"}}>
@@ -861,7 +895,7 @@ function ProPanelView({ user, addPick, setView, picks }) {
             </div>
           ))}
         </div>
-        <button onClick={()=>setScreen("step1")} disabled={remaining<=0} style={{background:remaining<=0?"var(--d4)":"var(--g)",color:remaining<=0?"var(--muted)":"#000",border:"none",padding:"16px 36px",borderRadius:8,fontFamily:"'Barlow Condensed'",fontSize:"1.1rem",fontWeight:900,letterSpacing:2,cursor:remaining<=0?"not-allowed":"pointer"}}>
+        <button onClick={()=>{setLeagueSearch("");setSportsError("");setScreen("step1");}} disabled={remaining<=0} style={{background:remaining<=0?"var(--d4)":"var(--g)",color:remaining<=0?"var(--muted)":"#000",border:"none",padding:"16px 36px",borderRadius:8,fontFamily:"'Barlow Condensed'",fontSize:"1.1rem",fontWeight:900,letterSpacing:2,cursor:remaining<=0?"not-allowed":"pointer"}}>
           {remaining<=0?"LÍMITE ALCANZADO HOY":"+ SUBIR NUEVO PICK"}
         </button>
       </div>
@@ -876,12 +910,23 @@ function ProPanelView({ user, addPick, setView, picks }) {
         <h2 style={{fontFamily:"'Bebas Neue'",fontSize:"2.5rem",marginBottom:24}}>Selecciona la liga</h2>
         <div style={{background:"var(--d3)",borderRadius:12,padding:"12px 16px",border:"2px solid var(--g)",marginBottom:16,display:"flex",alignItems:"center",gap:10}}>
           <span style={{fontSize:"1.2rem"}}>🔍</span>
-          <input type="text" value={leagueSearch} onChange={e=>setLeagueSearch(e.target.value)} placeholder="Buscar liga o país..." style={{flex:1,background:"none",border:"none",outline:"none",color:"var(--text)",fontSize:"1rem"}}/>
+          <input type="text" value={leagueSearch} onChange={e=>setLeagueSearch(e.target.value)} placeholder="Buscar liga, deporte o clave..." style={{flex:1,background:"none",border:"none",outline:"none",color:"var(--text)",fontSize:"1rem"}}/>
         </div>
-        {filteredLeagues.length>0 ? (
+        {loadingSports ? (
+          <div style={{textAlign:"center",color:"var(--muted)",padding:30}}>
+            Cargando catálogo global de ligas...
+          </div>
+        ) : sportsError ? (
+          <div style={{background:"rgba(244,67,54,0.08)",border:"1px solid rgba(244,67,54,0.35)",borderRadius:10,padding:"14px 16px",color:"#ff9e9e"}}>
+            <div style={{fontSize:"0.85rem",marginBottom:10}}>{sportsError}</div>
+            <button onClick={()=>{setSportsError("");setOddsSports([]);}} style={{background:"none",border:"1px solid #f44336",color:"#f44336",borderRadius:6,padding:"6px 12px",fontSize:"0.75rem",fontWeight:700,cursor:"pointer"}}>
+              Reintentar
+            </button>
+          </div>
+        ) : filteredLeagues.length>0 ? (
           <div style={{background:"var(--d3)",borderRadius:12,overflow:"hidden",border:"1px solid var(--border)"}}>
-            {filteredLeagues.map((l,i)=>(
-              <button key={i} onClick={()=>{setLeague(l);setLiveMatches(null);setScreen("step2");}} style={{width:"100%",background:"none",border:"none",borderBottom:"1px solid var(--border)",padding:"12px 16px",cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",justifyContent:"space-between"}}
+            {filteredLeagues.map((l)=>(
+              <button key={l.key} onClick={()=>{setMatch(null);setLeague(l);setLiveMatches(null);setScreen("step2");}} style={{width:"100%",background:"none",border:"none",borderBottom:"1px solid var(--border)",padding:"12px 16px",cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",justifyContent:"space-between"}}
                 onMouseEnter={e=>e.currentTarget.style.background="rgba(29,185,84,0.06)"}
                 onMouseLeave={e=>e.currentTarget.style.background="none"}>
                 <div style={{color:"var(--text)",fontWeight:600}}>{l.flag} {l.name}</div>
@@ -889,10 +934,14 @@ function ProPanelView({ user, addPick, setView, picks }) {
               </button>
             ))}
           </div>
-        ) : leagueSearch.length<2 ? (
+        ) : leagueSearch.length>=2 ? (
+          <div style={{textAlign:"center",color:"var(--muted)",padding:20}}>Sin resultados para "{leagueSearch}"</div>
+        ) : oddsSports.length===0 ? (
+          <div style={{textAlign:"center",color:"var(--muted)",padding:20}}>No hay ligas disponibles ahora mismo</div>
+        ) : (
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:8}}>
-            {ALL_LEAGUES.slice(0,12).map((l,i)=>(
-              <button key={i} onClick={()=>{setLeague(l);setLiveMatches(null);setScreen("step2");}} style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:"14px 10px",cursor:"pointer",textAlign:"center",transition:"all .2s"}}
+            {oddsSports.slice(0,24).map((l)=>(
+              <button key={l.key} onClick={()=>{setMatch(null);setLeague(l);setLiveMatches(null);setScreen("step2");}} style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:"14px 10px",cursor:"pointer",textAlign:"center",transition:"all .2s"}}
                 onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--g)";e.currentTarget.style.background="rgba(29,185,84,0.06)";}}
                 onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--border)";e.currentTarget.style.background="var(--d3)";}}>
                 <div style={{fontSize:"1.4rem",marginBottom:4}}>{l.flag}</div>
@@ -901,8 +950,6 @@ function ProPanelView({ user, addPick, setView, picks }) {
               </button>
             ))}
           </div>
-        ) : (
-          <div style={{textAlign:"center",color:"var(--muted)",padding:20}}>Sin resultados para "{leagueSearch}"</div>
         )}
       </div>
     </div>
@@ -911,7 +958,7 @@ function ProPanelView({ user, addPick, setView, picks }) {
   if(screen==="step2") return (
     <div style={{paddingTop:80,padding:"clamp(80px,12vw,100px) 5% 60px"}}>
       <div style={{maxWidth:600,margin:"0 auto"}}>
-        <button onClick={()=>setScreen("step1")} style={{background:"none",border:"none",color:"var(--g)",cursor:"pointer",fontSize:"0.85rem",marginBottom:20}}>← Cambiar liga</button>
+        <button onClick={()=>{setMatch(null);setScreen("step1");}} style={{background:"none",border:"none",color:"var(--g)",cursor:"pointer",fontSize:"0.85rem",marginBottom:20}}>← Cambiar liga</button>
         <div style={{fontSize:"0.68rem",color:"var(--g)",letterSpacing:3,textTransform:"uppercase",fontWeight:700,marginBottom:8}}>Paso 2 de 3</div>
         <h2 style={{fontFamily:"'Bebas Neue'",fontSize:"2.5rem",marginBottom:8}}>Selecciona el partido</h2>
         <div style={{marginBottom:16,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
@@ -1014,7 +1061,7 @@ function ProPanelView({ user, addPick, setView, picks }) {
         <p style={{color:"var(--muted)",marginBottom:32}}>{league?.name} · {match?.home} vs {match?.away}</p>
         <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
           <button onClick={()=>setView("marketplace")} style={{background:"var(--g)",color:"#000",border:"none",padding:"13px 28px",borderRadius:8,fontFamily:"'Barlow Condensed'",fontSize:"1rem",fontWeight:900,letterSpacing:2,cursor:"pointer"}}>VER EN MARKETPLACE</button>
-          <button onClick={()=>{setScreen("dashboard");setLeague(null);setMatch(null);setOdds("2.50");setBank("10");setPrice("10");setImgSrc(null);setLiveMatches(null);}} style={{background:"var(--d3)",color:"var(--text)",border:"1px solid var(--border)",padding:"13px 28px",borderRadius:8,fontFamily:"'Barlow Condensed'",fontSize:"1rem",fontWeight:700,letterSpacing:2,cursor:"pointer"}}>SUBIR OTRO</button>
+          <button onClick={()=>{setScreen("dashboard");setLeague(null);setMatch(null);setOdds("2.50");setBank("10");setPrice("10");setImgSrc(null);setLiveMatches(null);setLeagueSearch("");setSportsError("");}} style={{background:"var(--d3)",color:"var(--text)",border:"1px solid var(--border)",padding:"13px 28px",borderRadius:8,fontFamily:"'Barlow Condensed'",fontSize:"1rem",fontWeight:700,letterSpacing:2,cursor:"pointer"}}>SUBIR OTRO</button>
         </div>
       </div>
     </div>
