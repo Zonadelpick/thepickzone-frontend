@@ -873,11 +873,47 @@ function ProPanelView({ user, addPick, setView, picks }) {
   }
 
   const query = leagueSearch.trim().toLowerCase();
-  const filteredLeagues = query.length>=2
+  const filteredLeagues = query.length>=1
     ? oddsSports.filter((l)=>
         [l.name,l.title,l.group,l.country,l.key].some((f)=>String(f||"").toLowerCase().includes(query))
       ).slice(0,40)
     : [];
+  const selectLeagueAndContinue = (l) => {
+    setMatch(null);
+    setLeague(l);
+    setLiveMatches(null);
+    setScreen("step2");
+  };
+  const getLeaguesByPriorityKeys = (keys) => {
+    const map = new Map(oddsSports.map((l)=>[l.key,l]));
+    return keys.map((k)=>map.get(k)).filter(Boolean);
+  };
+  const topEuropeLeagues = getLeaguesByPriorityKeys([
+    "soccer_epl",
+    "soccer_spain_la_liga",
+    "soccer_italy_serie_a",
+    "soccer_germany_bundesliga",
+    "soccer_france_ligue_one",
+    "soccer_uefa_champs_league",
+    "soccer_uefa_europa_league",
+    "soccer_uefa_europa_conference_league",
+  ]);
+  const ligaMxLeagues = getLeaguesByPriorityKeys(["soccer_mexico_ligamx"]);
+  const usaLeagues = getLeaguesByPriorityKeys([
+    "americanfootball_nfl",
+    "basketball_nba",
+    "baseball_mlb",
+    "icehockey_nhl",
+    "soccer_usa_mls",
+    "basketball_wnba",
+    "americanfootball_ncaaf",
+    "basketball_ncaab",
+  ]);
+  const quickGroups = [
+    { title: "Top ligas europeas", items: topEuropeLeagues },
+    { title: "Liga MX", items: ligaMxLeagues },
+    { title: "Deportes de Estados Unidos", items: usaLeagues },
+  ].filter((g)=>g.items.length>0);
 
   if(screen==="dashboard") return (
     <div style={{paddingTop:80,minHeight:"100vh",padding:"clamp(80px,12vw,100px) 5% 60px"}}>
@@ -923,10 +959,10 @@ function ProPanelView({ user, addPick, setView, picks }) {
               Reintentar
             </button>
           </div>
-        ) : filteredLeagues.length>0 ? (
+        ) : query.length>=1 && filteredLeagues.length>0 ? (
           <div style={{background:"var(--d3)",borderRadius:12,overflow:"hidden",border:"1px solid var(--border)"}}>
             {filteredLeagues.map((l)=>(
-              <button key={l.key} onClick={()=>{setMatch(null);setLeague(l);setLiveMatches(null);setScreen("step2");}} style={{width:"100%",background:"none",border:"none",borderBottom:"1px solid var(--border)",padding:"12px 16px",cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",justifyContent:"space-between"}}
+              <button key={l.key} onClick={()=>selectLeagueAndContinue(l)} style={{width:"100%",background:"none",border:"none",borderBottom:"1px solid var(--border)",padding:"12px 16px",cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",justifyContent:"space-between"}}
                 onMouseEnter={e=>e.currentTarget.style.background="rgba(29,185,84,0.06)"}
                 onMouseLeave={e=>e.currentTarget.style.background="none"}>
                 <div style={{color:"var(--text)",fontWeight:600}}>{l.flag} {l.name}</div>
@@ -934,21 +970,43 @@ function ProPanelView({ user, addPick, setView, picks }) {
               </button>
             ))}
           </div>
-        ) : leagueSearch.length>=2 ? (
+        ) : query.length>=1 ? (
           <div style={{textAlign:"center",color:"var(--muted)",padding:20}}>Sin resultados para "{leagueSearch}"</div>
         ) : oddsSports.length===0 ? (
           <div style={{textAlign:"center",color:"var(--muted)",padding:20}}>No hay ligas disponibles ahora mismo</div>
         ) : (
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:8}}>
-            {oddsSports.slice(0,24).map((l)=>(
-              <button key={l.key} onClick={()=>{setMatch(null);setLeague(l);setLiveMatches(null);setScreen("step2");}} style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:"14px 10px",cursor:"pointer",textAlign:"center",transition:"all .2s"}}
-                onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--g)";e.currentTarget.style.background="rgba(29,185,84,0.06)";}}
-                onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--border)";e.currentTarget.style.background="var(--d3)";}}>
-                <div style={{fontSize:"1.4rem",marginBottom:4}}>{l.flag}</div>
-                <div style={{fontSize:"0.75rem",color:"var(--text)",fontWeight:600}}>{l.name}</div>
-                <div style={{fontSize:"0.62rem",color:"var(--muted)"}}>{l.sport}</div>
-              </button>
+          <div style={{display:"flex",flexDirection:"column",gap:18}}>
+            {quickGroups.map((group)=>(
+              <div key={group.title}>
+                <div style={{fontSize:"0.72rem",color:"var(--g)",letterSpacing:1.2,fontWeight:800,textTransform:"uppercase",marginBottom:8}}>
+                  {group.title}
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:8}}>
+                  {group.items.map((l)=>(
+                    <button key={l.key} onClick={()=>selectLeagueAndContinue(l)} style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:"14px 10px",cursor:"pointer",textAlign:"center",transition:"all .2s"}}
+                      onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--g)";e.currentTarget.style.background="rgba(29,185,84,0.06)";}}
+                      onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--border)";e.currentTarget.style.background="var(--d3)";}}>
+                      <div style={{fontSize:"1.4rem",marginBottom:4}}>{l.flag}</div>
+                      <div style={{fontSize:"0.75rem",color:"var(--text)",fontWeight:600}}>{l.name}</div>
+                      <div style={{fontSize:"0.62rem",color:"var(--muted)"}}>{l.sport}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
             ))}
+            {quickGroups.length===0 && (
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:8}}>
+                {oddsSports.slice(0,24).map((l)=>(
+                  <button key={l.key} onClick={()=>selectLeagueAndContinue(l)} style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:"14px 10px",cursor:"pointer",textAlign:"center",transition:"all .2s"}}
+                    onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--g)";e.currentTarget.style.background="rgba(29,185,84,0.06)";}}
+                    onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--border)";e.currentTarget.style.background="var(--d3)";}}>
+                    <div style={{fontSize:"1.4rem",marginBottom:4}}>{l.flag}</div>
+                    <div style={{fontSize:"0.75rem",color:"var(--text)",fontWeight:600}}>{l.name}</div>
+                    <div style={{fontSize:"0.62rem",color:"var(--muted)"}}>{l.sport}</div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
