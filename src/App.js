@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 
 const BACKEND_URL = "https://thepickzone-backend-1.onrender.com";
-const PAYPAL_CLIENT_ID = "AfC5IdhZr9ZgD94g2Rszgj8rwgM8o1R9j2bdsn-rOfvshjKp-jEqPiMKt057mJdfdSK8czay2muw3MB0";
 
 // ── GLOBAL STYLES ─────────────────────────────────────────────────────────────
 const G = `
@@ -44,6 +43,17 @@ function isoToLocal(iso) {
     const months = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
     return `${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]} - ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
   } catch(e) { return iso; }
+}
+
+function getCheckoutReturnUrls() {
+  const base = `${window.location.origin}${window.location.pathname}`;
+  return { successUrl: base, cancelUrl: base };
+}
+
+function clearCheckoutQueryParams() {
+  if (window.location.search) {
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
 }
 
 // ── LEAGUES ───────────────────────────────────────────────────────────────────
@@ -231,12 +241,76 @@ function PurchaseView({ pick, setView, user }) {
   const [step, setStep] = React.useState(1);
   const [paying, setPaying] = React.useState(false);
   const [error, setError] = React.useState("");
-  const [cardNumber, setCardNumber] = React.useState("");
-  const [expiry, setExpiry] = React.useState("");
-  const [cvv, setCvv] = React.useState("");
   const [unlockedPick, setUnlockedPick] = React.useState(null);
+  const [resolvedPick, setResolvedPick] = React.useState(pick || null);
+  const [resolvingPick, setResolvingPick] = React.useState(false);
+  const handledSessionRef = React.useRef(null);
 
-  if (!pick) { setView("marketplace"); return null; }
+  React.useEffect(()=>{
+    if (pick) setResolvedPick(pick);
+  },[pick]);
+
+  React.useEffect(()=>{
+    const params = new URLSearchParams(window.location.search);
+    const flow = params.get("flow");
+    const queryPickId = params.get("pickId");
+    if (pick || flow !== "pick" || !queryPickId) return;
+    setResolvingPick(true);
+    fetch(BACKEND_URL+"/api/picks")
+      .then(r=>r.json())
+      .then(data=>{
+        if(Array.isArray(data)){
+          const found = data.find((p)=>String(p._id||p.id)===String(queryPickId));
+          if(found) setResolvedPick(found);
+        }
+      })
+      .catch(()=>{})
+      .finally(()=>setResolvingPick(false));
+  },[pick]);
+
+  React.useEffect(()=>{
+    const params = new URLSearchParams(window.location.search);
+    const flow = params.get("flow");
+    const checkout = params.get("checkout");
+    const sessionId = params.get("session_id");
+    const queryPickId = params.get("pickId");
+    if (flow !== "pick") return;
+    if (checkout === "cancel") {
+      setError("Pago cancelado.");
+      clearCheckoutQueryParams();
+      return;
+    }
+    if (checkout !== "success" || !sessionId || handledSessionRef.current === sessionId) return;
+    if (!user) return;
+    const token = localStorage.getItem("tpz_token");
+    if (!token) {
+      setError("Inicia sesión para confirmar la compra.");
+      return;
+    }
+    handledSessionRef.current = sessionId;
+    setPaying(true);
+    setError("");
+    fetch(BACKEND_URL+"/api/stripe/picks/confirm-checkout-session",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},
+      body:JSON.stringify({sessionId,pickId:queryPickId||resolvedPick?._id})
+    })
+      .then(async (r)=>{
+        const data = await r.json();
+        if(!r.ok||!data.success){
+          const details = [data.status,data.checkoutStatus,data.paymentIntentStatus].filter(Boolean).join(" / ");
+          throw new Error(details ? `${data.error||"No se pudo confirmar el pago"} (${details})` : (data.error||"No se pudo confirmar el pago"));
+        }
+        setUnlockedPick(data.pick);
+        setStep(2);
+        clearCheckoutQueryParams();
+      })
+      .catch((e)=>setError(e.message||"Error confirmando pago"))
+      .finally(()=>setPaying(false));
+  },[user,resolvedPick]);
+
+  const activePick = resolvedPick || pick;
+
   if (!user) return (
     <div style={{paddingTop:120,textAlign:"center",padding:"120px 5%"}}>
       <h2 style={{fontFamily:"'Bebas Neue'",fontSize:"2rem",marginBottom:16}}>Inicia sesión para comprar</h2>
@@ -244,90 +318,61 @@ function PurchaseView({ pick, setView, user }) {
     </div>
   );
 
-  const timeDisplay = pick.time && (pick.time.includes('T') || pick.time.includes('Z')) ? isoToLocal(pick.time) : pick.time;
+  if (!activePick) {
+    if (resolvingPick || new URLSearchParams(window.location.search).get("flow")==="pick") {
+      return <div style={{paddingTop:120,textAlign:"center",color:"var(--muted)"}}>Cargando compra...</div>;
+    }
+    setView("marketplace");
+    return null;
+  }
+
+  const timeDisplay = activePick.time && (activePick.time.includes('T') || activePick.time.includes('Z')) ? isoToLocal(activePick.time) : activePick.time;
 
   async function handleBuy() {
-    if (pick.price === 0 || pick.price === "0") {
-      setPaying(true);
-      try {
-        const token = localStorage.getItem("tpz_token");
-        const r = await fetch(BACKEND_URL+"/api/stripe/create-payment-intent",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({pickId:pick._id})});
-        const data = await r.json();
-        if(data.free){
-          const pr = await fetch(BACKEND_URL+"/api/picks/"+pick._id+"/full",{headers:{"Authorization":"Bearer "+token}});
-          const fullP = pr.ok ? await pr.json() : pick;
-          setUnlockedPick(fullP);
-          setStep(2);
-        }
-      } catch(e){ setError("Error al desbloquear"); }
-      setPaying(false);
+    const token = localStorage.getItem("tpz_token");
+    if (!token) {
+      setView("login");
       return;
     }
-    setStep("card");
-  }
-
-  async function payWithCard() {
-    if(!cardNumber||!expiry||!cvv){setError("Completa todos los campos");return;}
-    setPaying(true); setError("");
+    setPaying(true);
+    setError("");
     try {
-      const token = localStorage.getItem("tpz_token");
-      const r = await fetch(BACKEND_URL+"/api/stripe/create-payment-intent",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({pickId:pick._id})});
+      const { successUrl, cancelUrl } = getCheckoutReturnUrls();
+      const r = await fetch(BACKEND_URL+"/api/stripe/picks/create-checkout-session",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},
+        body:JSON.stringify({pickId:activePick._id,successUrl,cancelUrl})
+      });
       const data = await r.json();
-      if(!r.ok){setError(data.error||"Error");setPaying(false);return;}
-      const stripeLib = await import("@stripe/stripe-js");
-      const stripe = await stripeLib.loadStripe("pk_test_51TQpsB2NnQpZZGi88jDYyKtPqzUe2VyXNSP9pu4dgsT25X3F6umZj726RLisiJNExDPWriVvhAtl3zxO2lQQGErB00XB44Jq6J");
-      const parts = expiry.split("/");
-      const pm = await stripe.createPaymentMethod({type:"card",card:{number:cardNumber,exp_month:parseInt(parts[0]),exp_year:parseInt("20"+(parts[1]||"26")),cvc:cvv}});
-      if(pm.error){setError(pm.error.message);setPaying(false);return;}
-      const conf = await stripe.confirmCardPayment(data.clientSecret,{payment_method:pm.paymentMethod.id});
-      if(conf.error){setError(conf.error.message);setPaying(false);return;}
-      const cr = await fetch(BACKEND_URL+"/api/stripe/confirm-payment",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({paymentIntentId:conf.paymentIntent.id,pickId:pick._id})});
-      const cd = await cr.json();
-      if(cr.ok&&cd.success){setUnlockedPick(cd.pick);setStep(2);}
-      else setError(cd.error||"Pago no completado");
-    }catch(e){setError("Error: "+e.message);}
+      if(!r.ok){
+        setError(data.error||"No se pudo iniciar el pago");
+        setPaying(false);
+        return;
+      }
+      if(data.free||data.alreadyUnlocked){
+        setUnlockedPick(data.pick||activePick);
+        setStep(2);
+        setPaying(false);
+        clearCheckoutQueryParams();
+        return;
+      }
+      if(data.checkoutUrl){
+        window.location.href = data.checkoutUrl;
+        return;
+      }
+      setError("No se recibió URL de checkout");
+    } catch(e){
+      setError("Error: "+e.message);
+    }
     setPaying(false);
   }
-
-  if(step==="card") return (
-    <div style={{paddingTop:80,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:"clamp(80px,12vw,100px) 5% 60px"}}>
-      <div style={{maxWidth:440,width:"100%",animation:"popIn .4s ease"}}>
-        <div style={{background:"var(--d2)",border:"1px solid rgba(29,185,84,0.3)",borderRadius:20,padding:28}}>
-          <div style={{textAlign:"center",marginBottom:24}}>
-            <div style={{fontSize:"0.68rem",color:"var(--g)",letterSpacing:3,fontWeight:700,marginBottom:8}}>PAGO SEGURO CON TARJETA</div>
-            <h2 style={{fontFamily:"'Bebas Neue'",fontSize:"1.8rem"}}>{"Pagar $"+pick.price+" USD"}</h2>
-            <p style={{color:"var(--muted)",fontSize:"0.82rem",marginTop:4}}>{pick.match}</p>
-          </div>
-          <div style={{marginBottom:12}}>
-            <div style={{fontSize:"0.72rem",color:"var(--muted)",marginBottom:6}}>Número de tarjeta</div>
-            <input value={cardNumber} onChange={e=>setCardNumber(e.target.value.replace(/\D/g,"").slice(0,16))} placeholder="4242 4242 4242 4242" style={{width:"100%",background:"var(--d4)",border:"1px solid var(--border)",borderRadius:8,padding:"12px 14px",color:"var(--text)",fontSize:"1rem",outline:"none",boxSizing:"border-box"}}/>
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:20}}>
-            <div>
-              <div style={{fontSize:"0.72rem",color:"var(--muted)",marginBottom:6}}>Vencimiento</div>
-              <input value={expiry} onChange={e=>setExpiry(e.target.value)} placeholder="MM/AA" style={{width:"100%",background:"var(--d4)",border:"1px solid var(--border)",borderRadius:8,padding:"12px 14px",color:"var(--text)",fontSize:"1rem",outline:"none",boxSizing:"border-box"}}/>
-            </div>
-            <div>
-              <div style={{fontSize:"0.72rem",color:"var(--muted)",marginBottom:6}}>CVV</div>
-              <input value={cvv} onChange={e=>setCvv(e.target.value.slice(0,4))} placeholder="123" style={{width:"100%",background:"var(--d4)",border:"1px solid var(--border)",borderRadius:8,padding:"12px 14px",color:"var(--text)",fontSize:"1rem",outline:"none",boxSizing:"border-box"}}/>
-            </div>
-          </div>
-          {error&&<div style={{background:"rgba(244,67,54,0.1)",border:"1px solid #f44336",color:"#f44336",padding:"8px 12px",borderRadius:6,marginBottom:12,fontSize:"0.8rem"}}>{error}</div>}
-          <button onClick={payWithCard} disabled={paying} style={{width:"100%",background:paying?"var(--d4)":"var(--g)",color:paying?"var(--muted)":"#000",border:"none",padding:15,borderRadius:8,fontFamily:"'Barlow Condensed'",fontSize:"1.1rem",fontWeight:900,letterSpacing:2,cursor:"pointer",marginBottom:10}}>
-            {paying?"Procesando...":"PAGAR $"+pick.price+" USD"}
-          </button>
-          <button onClick={()=>setStep(1)} style={{width:"100%",background:"none",border:"none",color:"var(--muted)",fontSize:"0.8rem",cursor:"pointer"}}>← Volver</button>
-        </div>
-      </div>
-    </div>
-  );
 
   if (step === 2) return (
     <div style={{paddingTop:80,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:"clamp(80px,12vw,100px) 5% 60px"}}>
       <div style={{maxWidth:440,width:"100%",animation:"popIn .4s ease",textAlign:"center"}}>
         <div style={{width:64,height:64,borderRadius:"50%",background:"rgba(29,185,84,0.15)",border:"2px solid var(--g)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 20px",fontSize:"1.8rem"}}>✅</div>
         <h2 style={{fontFamily:"'Bebas Neue'",fontSize:"2rem",color:"var(--g)",marginBottom:8}}>¡Pick Desbloqueado!</h2>
-        <p style={{color:"var(--muted)",marginBottom:24}}>{pick.match}</p>
+        <p style={{color:"var(--muted)",marginBottom:24}}>{unlockedPick?.match||activePick.match}</p>
         <div style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:12,padding:20,marginBottom:20,textAlign:"left"}}>
           <div style={{fontSize:"0.7rem",color:"var(--g)",letterSpacing:2,fontWeight:700,marginBottom:12}}>🔓 CONTENIDO DESBLOQUEADO</div>
           {unlockedPick?.ticketImg ? (
@@ -349,11 +394,11 @@ function PurchaseView({ pick, setView, user }) {
         <div style={{background:"var(--d2)",border:"1px solid rgba(29,185,84,0.3)",borderRadius:20,overflow:"hidden"}}>
           <div style={{padding:"20px 24px",textAlign:"center",borderBottom:"1px solid var(--border)"}}>
             <div style={{fontSize:"0.68rem",color:"var(--g)",letterSpacing:3,textTransform:"uppercase",fontWeight:700,marginBottom:8}}>🔥 PICK EXCLUSIVO 🔒</div>
-            <div style={{fontFamily:"'Bebas Neue'",fontSize:"1.4rem"}}>{pick.match}</div>
-            <div style={{fontSize:"0.75rem",color:"var(--muted)",marginTop:4}}>{timeDisplay} · {pick.league}</div>
+            <div style={{fontFamily:"'Bebas Neue'",fontSize:"1.4rem"}}>{activePick.match}</div>
+            <div style={{fontSize:"0.75rem",color:"var(--muted)",marginTop:4}}>{timeDisplay} · {activePick.league}</div>
           </div>
           <div style={{display:"flex",borderBottom:"1px solid var(--border)"}}>
-            {[["$"+pick.price+" USD","Precio","var(--gold)"],[""+pick.odds,"Momio","var(--g)"],[pick.bank+"%","Bank","var(--text)"]].map(([v,l,col],i)=>(
+            {[["$"+activePick.price+" USD","Precio","var(--gold)"],[""+activePick.odds,"Momio","var(--g)"],[activePick.bank+"%","Bank","var(--text)"]].map(([v,l,col],i)=>(
               <div key={l} style={{flex:1,padding:"14px 8px",textAlign:"center",borderRight:i<2?"1px solid var(--border)":"none"}}>
                 <div style={{fontFamily:"'Bebas Neue'",fontSize:"1.4rem",color:col}}>{v}</div>
                 <div style={{fontSize:"0.65rem",color:"var(--muted)",letterSpacing:1}}>{l}</div>
@@ -367,16 +412,16 @@ function PurchaseView({ pick, setView, user }) {
             </div>
           </div>
           <div style={{padding:"14px 24px",display:"flex",alignItems:"center",gap:12,borderBottom:"1px solid var(--border)"}}>
-            <div style={{width:36,height:36,borderRadius:"50%",background:"var(--g)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Bebas Neue'",color:"#000",fontSize:"1rem"}}>{(pick.tipster||"T")[0]}</div>
+            <div style={{width:36,height:36,borderRadius:"50%",background:"var(--g)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Bebas Neue'",color:"#000",fontSize:"1rem"}}>{(activePick.tipster||"T")[0]}</div>
             <div>
-              <div style={{fontWeight:700,fontSize:"0.9rem"}}>{pick.tipster}</div>
-              <div style={{fontSize:"0.72rem",color:"var(--g)"}}>ROI {pick.roi||"+0%"}</div>
+              <div style={{fontWeight:700,fontSize:"0.9rem"}}>{activePick.tipster}</div>
+              <div style={{fontSize:"0.72rem",color:"var(--g)"}}>ROI {activePick.roi||"+0%"}</div>
             </div>
           </div>
           <div style={{padding:20}}>
             {error && <div style={{background:"rgba(244,67,54,0.1)",border:"1px solid #f44336",color:"#f44336",padding:"8px 12px",borderRadius:6,marginBottom:12,fontSize:"0.8rem"}}>{error}</div>}
             <button onClick={handleBuy} disabled={paying} style={{width:"100%",background:paying?"var(--d4)":"var(--g)",color:paying?"var(--muted)":"#000",border:"none",padding:15,borderRadius:8,fontFamily:"'Barlow Condensed'",fontSize:"1.1rem",fontWeight:900,letterSpacing:2,cursor:"pointer"}}>
-              {paying?"Procesando...":pick.price===0||pick.price==="0"?"🎁 OBTENER GRATIS":"💳 PAGAR CON TARJETA - $"+pick.price+" USD"}
+              {paying?"Procesando...":activePick.price===0||activePick.price==="0"?"🎁 OBTENER GRATIS":"💳 PAGAR CON STRIPE - $"+activePick.price+" USD"}
             </button>
             <div style={{textAlign:"center",fontSize:"0.72rem",color:"var(--muted)",marginTop:10}}>🔒 Pago seguro · Acceso inmediato</div>
           </div>
@@ -516,7 +561,6 @@ function AuthView({ setView, setUser, mode }) {
 function ProfileView({ setView, user, setUser }) {
   const [name, setName] = useState(user?.name||"");
   const [bio, setBio] = useState(user?.bio||"");
-  const [paypal, setPaypal] = useState(user?.paypal||"");
   const [avatar, setAvatar] = useState(user?.avatar||null);
   const [editMode, setEditMode] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -524,10 +568,10 @@ function ProfileView({ setView, user, setUser }) {
   async function handleSave() {
     try {
       const token = localStorage.getItem("tpz_token");
-      const r = await fetch(BACKEND_URL+"/api/auth/profile",{method:"PUT",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({name,bio,paypal,avatar})});
-      if(r.ok){const updated=await r.json();setUser(prev=>({...prev,...updated,name,bio,paypal,avatar}));}
-      else{setUser(prev=>({...prev,name,bio,paypal,avatar}));}
-    }catch(e){setUser(prev=>({...prev,name,bio,paypal,avatar}));}
+      const r = await fetch(BACKEND_URL+"/api/auth/profile",{method:"PUT",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({name,bio,avatar})});
+      if(r.ok){const updated=await r.json();setUser(prev=>({...prev,...updated,name,bio,avatar}));}
+      else{setUser(prev=>({...prev,name,bio,avatar}));}
+    }catch(e){setUser(prev=>({...prev,name,bio,avatar}));}
     setSaved(true); setEditMode(false); setTimeout(()=>setSaved(false),2000);
   }
 
@@ -559,7 +603,6 @@ function ProfileView({ setView, user, setUser }) {
                 <>
                   <input value={name} onChange={e=>setName(e.target.value)} placeholder="Nombre" style={{width:"100%",background:"var(--d4)",border:"1px solid var(--border)",borderRadius:6,padding:"8px 10px",color:"var(--text)",fontSize:"1rem",fontWeight:700,outline:"none",marginBottom:6,boxSizing:"border-box"}}/>
                   <textarea value={bio} onChange={e=>setBio(e.target.value)} placeholder="Bio" style={{width:"100%",background:"var(--d4)",border:"1px solid var(--border)",borderRadius:6,padding:"6px 10px",color:"var(--muted)",fontSize:"0.82rem",outline:"none",resize:"none",height:60,boxSizing:"border-box"}}/>
-                  <input value={paypal} onChange={e=>setPaypal(e.target.value)} placeholder="Email PayPal" style={{width:"100%",background:"var(--d4)",border:"1px solid var(--border)",borderRadius:6,padding:"6px 10px",color:"var(--muted)",fontSize:"0.82rem",outline:"none",marginTop:6,boxSizing:"border-box"}}/>
                 </>
               ):(
                 <>
@@ -598,25 +641,95 @@ function ProfileView({ setView, user, setUser }) {
 // ── BECOME PRO ────────────────────────────────────────────────────────────────
 function BecomeProView({ setView, user, setUser }) {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const handledSessionRef = React.useRef(null);
 
-  async function handlePayPal() {
+  React.useEffect(()=>{
+    const params = new URLSearchParams(window.location.search);
+    const flow = params.get("flow");
+    const checkout = params.get("checkout");
+    const sessionId = params.get("session_id");
+    if (flow !== "pro") return;
+    if (checkout === "cancel") {
+      setError("Pago cancelado.");
+      clearCheckoutQueryParams();
+      return;
+    }
+    if (checkout !== "success" || !sessionId || handledSessionRef.current === sessionId) return;
+    if (!user) return;
+    confirmProCheckout(sessionId);
+  },[user]);
+
+  async function confirmProCheckout(sessionId) {
+    const token = localStorage.getItem("tpz_token");
+    if (!token) {
+      setError("Inicia sesión para confirmar la membresía Pro.");
+      return;
+    }
+    handledSessionRef.current = sessionId;
     setLoading(true);
+    setError("");
     try {
-      const token = localStorage.getItem("tpz_token");
-      const r = await fetch(BACKEND_URL+"/api/paypal/create-order",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({amount:"29.99",description:"ThePickZone Pro 30 días"})});
+      const r = await fetch(BACKEND_URL+"/api/stripe/pro/confirm-checkout-session",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},
+        body:JSON.stringify({sessionId})
+      });
       const data = await r.json();
-      if (!r.ok){setLoading(false);return;}
-      const orderId = data.orderId;
-      const win = window.open("https://www.paypal.com/checkoutnow?token="+orderId,"_blank","width=500,height=600");
-      const interval = setInterval(async()=>{
-        try{
-          const cr=await fetch(BACKEND_URL+"/api/paypal/capture-order",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({orderId})});
-          if(cr.ok){clearInterval(interval);if(win)win.close();const me=await fetch(BACKEND_URL+"/api/auth/me",{headers:{"Authorization":"Bearer "+token}});const u=await me.json();setUser(u);setView("profile");setLoading(false);}
-        }catch(e){}
-      },3000);
-      setTimeout(()=>{clearInterval(interval);setLoading(false);},120000);
-    }catch(e){setLoading(false);}
+      if(!r.ok||!data.success){
+        const details = [data.status,data.checkoutStatus,data.paymentIntentStatus].filter(Boolean).join(" / ");
+        setError(details ? `${data.error||"Pago no completado"} (${details})` : (data.error||"Pago no completado"));
+        setLoading(false);
+        return;
+      }
+      const me = await fetch(BACKEND_URL+"/api/auth/me",{headers:{"Authorization":"Bearer "+token}});
+      if(me.ok){const u = await me.json();setUser(u);}
+      else{setUser(prev=>({...prev,role:"pro",proExpiry:data.proExpiry}));}
+      clearCheckoutQueryParams();
+      setLoading(false);
+      setView("profile");
+      return;
+    } catch(e) {
+      setError("Error: "+e.message);
+    }
+    setLoading(false);
   }
+
+  async function startProCheckout() {
+    const token = localStorage.getItem("tpz_token");
+    if (!token) {
+      setView("login");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      const { successUrl, cancelUrl } = getCheckoutReturnUrls();
+      const r = await fetch(BACKEND_URL+"/api/stripe/pro/create-checkout-session",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},
+        body:JSON.stringify({successUrl,cancelUrl})
+      });
+      const data = await r.json();
+      if(!r.ok||!data.checkoutUrl){
+        setError(data.error||"No se pudo iniciar checkout");
+        setLoading(false);
+        return;
+      }
+      window.location.href = data.checkoutUrl;
+      return;
+    } catch(e) {
+      setError("Error: "+e.message);
+    }
+    setLoading(false);
+  }
+
+  if (!user) return (
+    <div style={{paddingTop:120,textAlign:"center",padding:"120px 5%"}}>
+      <h2 style={{fontFamily:"'Bebas Neue'",fontSize:"2rem",marginBottom:16}}>Inicia sesión para activar Pro</h2>
+      <button onClick={()=>setView("login")} style={{background:"var(--g)",color:"#000",border:"none",padding:"13px 28px",borderRadius:8,fontFamily:"'Barlow Condensed'",fontSize:"1rem",fontWeight:900,letterSpacing:2,cursor:"pointer"}}>INICIAR SESIÓN</button>
+    </div>
+  );
 
   return (
     <div style={{paddingTop:80,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:"clamp(80px,12vw,100px) 5% 60px"}}>
@@ -629,8 +742,9 @@ function BecomeProView({ setView, user, setUser }) {
             <div key={b} style={{fontSize:"0.85rem",color:"var(--text)",padding:"6px 0",borderBottom:"1px solid var(--border)",textAlign:"left"}}>{b}</div>
           ))}
         </div>
-        <button onClick={handlePayPal} disabled={loading} style={{width:"100%",background:"var(--g)",color:"#000",border:"none",padding:"16px",borderRadius:10,fontFamily:"'Barlow Condensed'",fontSize:"1.1rem",fontWeight:900,letterSpacing:2,cursor:"pointer"}}>
-          {loading?"Procesando...":"PAGAR CON PAYPAL - $29.99"}
+        {error&&<div style={{background:"rgba(244,67,54,0.1)",border:"1px solid #f44336",color:"#f44336",padding:"8px 12px",borderRadius:6,marginBottom:12,fontSize:"0.8rem"}}>{error}</div>}
+        <button onClick={startProCheckout} disabled={loading} style={{width:"100%",background:"var(--g)",color:"#000",border:"none",padding:"16px",borderRadius:10,fontFamily:"'Barlow Condensed'",fontSize:"1.1rem",fontWeight:900,letterSpacing:2,cursor:"pointer"}}>
+          {loading?"Procesando...":"PAGAR CON STRIPE - $29.99"}
         </button>
         <button onClick={()=>setView("profile")} style={{background:"none",border:"none",color:"var(--muted)",fontSize:"0.8rem",cursor:"pointer",marginTop:16}}>← Volver</button>
       </div>
@@ -1038,7 +1152,6 @@ function AdminPanel({ setView, user, picks }) {
                     <div style={{fontWeight:700,fontSize:"0.9rem"}}>{u.name}</div>
                     <div style={{fontSize:"0.72rem",color:"var(--muted)"}}>{u.email}</div>
                     <div style={{fontSize:"0.72rem",color:"var(--muted)"}}>{uPicks.length} picks</div>
-                    {u.paypal&&<div style={{fontSize:"0.72rem",color:"var(--g)"}}>PayPal: {u.paypal}</div>}
                   </div>
                   <div style={{textAlign:"right"}}>
                     <div style={{fontFamily:"'Bebas Neue'",fontSize:"1.4rem",color:"var(--gold)"}}>${(sales*0.9).toFixed(2)}</div>
@@ -1241,6 +1354,18 @@ export default function App() {
     }
   },[]);
 
+  useEffect(()=>{
+    const params = new URLSearchParams(window.location.search);
+    const flow = params.get("flow");
+    if (flow === "pick") {
+      setView("purchase");
+      return;
+    }
+    if (flow === "pro") {
+      setView("become-pro");
+    }
+  },[]);
+
   // Load picks from backend
   useEffect(()=>{
     fetch(BACKEND_URL+"/api/picks")
@@ -1252,6 +1377,15 @@ export default function App() {
     }, 60000);
     return ()=>clearInterval(interval);
   },[]);
+
+  useEffect(()=>{
+    const params = new URLSearchParams(window.location.search);
+    const flow = params.get("flow");
+    const pickId = params.get("pickId");
+    if (flow !== "pick" || !pickId || !Array.isArray(picks) || picks.length === 0) return;
+    const foundPick = picks.find((p)=>String(p._id||p.id)===String(pickId));
+    if (foundPick) setPurchaseTarget(foundPick);
+  },[picks]);
 
   function addPick(p){ setPicks(prev=>[p,...prev]); }
   function gotoView(v){ setView(v); window.scrollTo({top:0,behavior:"smooth"}); }
