@@ -251,6 +251,13 @@ function PurchaseView({ pick, setView, user }) {
   },[pick]);
 
   React.useEffect(()=>{
+    setStep(1);
+    setError("");
+    setUnlockedPick(null);
+    handledSessionRef.current = null;
+  },[user?._id, pick?._id]);
+
+  React.useEffect(()=>{
     const params = new URLSearchParams(window.location.search);
     const flow = params.get("flow");
     const queryPickId = params.get("pickId");
@@ -350,7 +357,16 @@ function PurchaseView({ pick, setView, user }) {
         return;
       }
       if(data.free||data.alreadyUnlocked){
-        setUnlockedPick(data.pick||activePick);
+        const fullRes = await fetch(BACKEND_URL+`/api/picks/${activePick._id}/full`,{
+          headers:{"Authorization":"Bearer "+token}
+        });
+        const fullData = await fullRes.json();
+        if(!fullRes.ok){
+          setError(fullData.error||"No tienes acceso a este pick");
+          setPaying(false);
+          return;
+        }
+        setUnlockedPick(fullData||data.pick||activePick);
         setStep(2);
         setPaying(false);
         clearCheckoutQueryParams();
@@ -1387,6 +1403,10 @@ export default function App() {
     if (foundPick) setPurchaseTarget(foundPick);
   },[picks]);
 
+  useEffect(()=>{
+    setPurchaseTarget(null);
+  },[user?._id]);
+
   function addPick(p){ setPicks(prev=>[p,...prev]); }
   function gotoView(v){ setView(v); window.scrollTo({top:0,behavior:"smooth"}); }
 
@@ -1396,7 +1416,7 @@ export default function App() {
       <NavBar view={view} setView={gotoView} user={user} setUser={setUser} notifications={notifications} setNotifications={setNotifications}/>
       {view==="home"             && <HomeView        setView={gotoView} setPurchaseTarget={setPurchaseTarget} picks={picks} setSelectedTipster={setSelectedTipster}/>}
       {view==="marketplace"      && <MarketplaceView setView={gotoView} setPurchaseTarget={setPurchaseTarget} picks={picks} setSelectedTipster={setSelectedTipster}/>}
-      {view==="purchase"         && <PurchaseView    pick={purchaseTarget} setView={gotoView} user={user}/>}
+      {view==="purchase"         && <PurchaseView    key={`${user?._id||'anon'}-${purchaseTarget?._id||'none'}`} pick={purchaseTarget} setView={gotoView} user={user}/>}
       {view==="rankings"         && <RankingsView    setView={gotoView} picks={picks}/>}
       {view==="login"            && <AuthView        setView={gotoView} setUser={setUser} mode="login"/>}
       {view==="register"         && <AuthView        setView={gotoView} setUser={setUser} mode="register"/>}
