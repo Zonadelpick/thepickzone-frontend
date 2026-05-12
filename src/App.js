@@ -2510,8 +2510,8 @@ function AdminPanel({ setView, user, picks }) {
     const r = await fetch(BACKEND_URL+"/api/picks/"+pickId+"/analyze",{method:"POST",headers:{"Authorization":"Bearer "+token}});
     const data = await r.json();
     if(r.ok){
-      const verdict = data.verification?.preliminaryVerdict || data.analysis?.resultado || "SIN RESULTADO";
-      const confidenceValue = data.verification?.preliminaryConfidence ?? data.analysis?.confianza;
+      const verdict = data.verification?.preliminaryResult || data.verification?.preliminaryVerdict || data.analysis?.resultado || "SIN RESULTADO";
+      const confidenceValue = data.verification?.confidence ?? data.verification?.preliminaryConfidence ?? data.analysis?.confianza;
       const confidenceLabel = Number.isFinite(Number(confidenceValue)) ? ` (${confidenceValue}%)` : "";
       alert("Dictamen: "+verdict+confidenceLabel);
       loadData();
@@ -2591,18 +2591,23 @@ function AdminPanel({ setView, user, picks }) {
 
   function getVerificationStatusLabel(statusValue) {
     const status = String(statusValue || "pending").toLowerCase();
-    if (status === "closed") return "CERRADO";
+    if (status === "closed_by_admin") return "CERRADO ADMIN";
+    if (status === "closed_auto") return "CERRADO AUTO";
     if (status === "reopened") return "REABIERTO";
-    if (status === "preliminary_done") return "PRELIMINAR LISTO";
+    if (status === "preliminary_ready") return "DICTAMEN LISTO";
+    if (status === "needs_review") return "REQUIERE REVISIÓN";
+    if (status === "pending_data") return "PENDIENTE DATOS";
     if (status === "error") return "ERROR IA";
     return "PENDIENTE";
   }
 
   function getVerificationStatusStyle(statusValue) {
     const status = String(statusValue || "pending").toLowerCase();
-    if (status === "closed") return {background:"rgba(29,185,84,0.15)",color:"var(--g)",border:"1px solid rgba(29,185,84,0.35)"};
+    if (status === "closed_by_admin") return {background:"rgba(29,185,84,0.15)",color:"var(--g)",border:"1px solid rgba(29,185,84,0.35)"};
+    if (status === "closed_auto") return {background:"rgba(0,188,212,0.16)",color:"#00bcd4",border:"1px solid rgba(0,188,212,0.4)"};
     if (status === "reopened") return {background:"rgba(100,100,255,0.15)",color:"#8b8bff",border:"1px solid rgba(100,100,255,0.45)"};
-    if (status === "preliminary_done") return {background:"rgba(245,197,66,0.16)",color:"var(--gold)",border:"1px solid rgba(245,197,66,0.4)"};
+    if (status === "preliminary_ready") return {background:"rgba(245,197,66,0.16)",color:"var(--gold)",border:"1px solid rgba(245,197,66,0.4)"};
+    if (status === "needs_review") return {background:"rgba(255,152,0,0.15)",color:"#ff9800",border:"1px solid rgba(255,152,0,0.45)"};
     if (status === "error") return {background:"rgba(244,67,54,0.14)",color:"#f44336",border:"1px solid rgba(244,67,54,0.45)"};
     return {background:"rgba(107,128,120,0.15)",color:"var(--muted)",border:"1px solid rgba(107,128,120,0.35)"};
   }
@@ -2679,14 +2684,14 @@ function AdminPanel({ setView, user, picks }) {
               const verification = p.verification || {};
               const statusLabel = getVerificationStatusLabel(verification.status);
               const statusStyle = getVerificationStatusStyle(verification.status);
-              const preliminaryVerdict = verification.preliminaryVerdict || p.aiAnalysis?.resultado || "";
-              const preliminaryConfidenceValue = verification.preliminaryConfidence ?? p.aiAnalysis?.confianza;
+              const preliminaryVerdict = verification.preliminaryResult || verification.preliminaryVerdict || p.aiAnalysis?.resultado || "";
+              const preliminaryConfidenceValue = verification.confidence ?? verification.preliminaryConfidence ?? p.aiAnalysis?.confianza;
               const preliminaryConfidence = Number(preliminaryConfidenceValue);
               const preliminaryConfidenceText = Number.isFinite(preliminaryConfidence) ? ` (${preliminaryConfidence}%)` : "";
               const evidenceItems = Array.isArray(verification.evidence) && verification.evidence.length>0
                 ? verification.evidence
                 : (Array.isArray(p.aiAnalysis?.evidence) ? p.aiAnalysis.evidence : []);
-              const closureReason = verification.closureReason || "";
+              const closureReason = verification.closureReason || verification.summary || "";
               const betSummary = [p.bet?.marketType, p.bet?.selection].filter(Boolean).join(" · ");
               const reopenedBy = verification.reopenedBy ? ` por ${verification.reopenedBy}` : "";
               const reopenedAt = verification.reopenedAt ? ` · ${new Date(verification.reopenedAt).toLocaleString("es-MX")}` : "";
@@ -2711,7 +2716,7 @@ function AdminPanel({ setView, user, picks }) {
                         )}
                       </div>
                       {betSummary && <div style={{fontSize:"0.68rem",color:"var(--text-dim)",marginBottom:4}}>Mercado: {betSummary}</div>}
-                      {closureReason && <div style={{fontSize:"0.68rem",color:"var(--text-dim)",marginBottom:4}}>Cierre admin: {closureReason}</div>}
+                      {closureReason && <div style={{fontSize:"0.68rem",color:"var(--text-dim)",marginBottom:4}}>Resumen: {closureReason}</div>}
                       {String(verification.status||"").toLowerCase()==="reopened" && (
                         <div style={{fontSize:"0.68rem",color:"#8b8bff",marginBottom:4}}>Inconformidad / reapertura{reopenedBy}{reopenedAt}</div>
                       )}
@@ -2759,15 +2764,15 @@ function AdminPanel({ setView, user, picks }) {
                     : p.result==="void"
                       ? {background:"rgba(245,197,66,0.15)",color:"var(--gold)"}
                       : {background:"rgba(107,128,120,0.15)",color:"var(--muted)"};
-                const preliminaryVerdict = verification.preliminaryVerdict || p.aiAnalysis?.resultado || "";
-                const preliminaryConfidenceValue = verification.preliminaryConfidence ?? p.aiAnalysis?.confianza;
+                const preliminaryVerdict = verification.preliminaryResult || verification.preliminaryVerdict || p.aiAnalysis?.resultado || "";
+                const preliminaryConfidenceValue = verification.confidence ?? verification.preliminaryConfidence ?? p.aiAnalysis?.confianza;
                 const preliminaryConfidence = Number(preliminaryConfidenceValue);
                 const preliminaryConfidenceText = Number.isFinite(preliminaryConfidence) ? ` (${preliminaryConfidence}%)` : "";
                 const betSummary = [p.bet?.marketType, p.bet?.selection].filter(Boolean).join(" · ");
                 const evidenceItems = Array.isArray(verification.evidence) && verification.evidence.length>0
                   ? verification.evidence
                   : (Array.isArray(p.aiAnalysis?.evidence) ? p.aiAnalysis.evidence : []);
-                const closureReason = verification.closureReason || "";
+                const closureReason = verification.closureReason || verification.summary || "";
                 const reopenedBy = verification.reopenedBy ? ` por ${verification.reopenedBy}` : "";
                 const reopenedAt = verification.reopenedAt ? ` · ${new Date(verification.reopenedAt).toLocaleString("es-MX")}` : "";
                 return (
@@ -2788,7 +2793,7 @@ function AdminPanel({ setView, user, picks }) {
                       </div>
                     )}
                     {betSummary && <div style={{fontSize:"0.68rem",color:"var(--text-dim)",marginBottom:4}}>Mercado: {betSummary}</div>}
-                    {closureReason && <div style={{fontSize:"0.68rem",color:"var(--text-dim)",marginBottom:4}}>Cierre admin: {closureReason}</div>}
+                    {closureReason && <div style={{fontSize:"0.68rem",color:"var(--text-dim)",marginBottom:4}}>Resumen: {closureReason}</div>}
                     {String(verification.status||"").toLowerCase()==="reopened" && (
                       <div style={{fontSize:"0.68rem",color:"#8b8bff",marginBottom:6}}>Inconformidad / reapertura{reopenedBy}{reopenedAt}</div>
                     )}
