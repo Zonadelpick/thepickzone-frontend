@@ -2487,6 +2487,25 @@ function AdminPanel({ setView, user, picks }) {
   const [payoutLoading, setPayoutLoading] = useState(false);
   const [payoutError, setPayoutError] = useState("");
   const [approvingPayoutId, setApprovingPayoutId] = useState("");
+  const [selectedPickIds, setSelectedPickIds] = useState([]);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [filters, setFilters] = useState({
+    search: "",
+    status: "all",
+    sport: "all",
+    minConfidence: "",
+    sort: "newest"
+  });
+  const [monitorSnapshot, setMonitorSnapshot] = useState({
+    thresholds: {},
+    totals: {},
+    statusCounts: [],
+    stalePicks: []
+  });
+  const [alertsFeed, setAlertsFeed] = useState([]);
+  const [monitorLoading, setMonitorLoading] = useState(false);
+  const [monitorError, setMonitorError] = useState("");
+  const [reanalyzingStale, setReanalyzingStale] = useState(false);
 
   const loadData = () => {
     const token = localStorage.getItem("tpz_token");
@@ -2641,6 +2660,234 @@ function AdminPanel({ setView, user, picks }) {
     return verdictValue ? String(verdictValue).toUpperCase() : "SIN VEREDICTO";
   }
 
+  function getPickConfidence(pick) {
+    const value = pick?.verification?.confidence ?? pick?.verification?.preliminaryConfidence ?? pick?.aiAnalysis?.confianza;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  function getPickStatusForFilter(pick) {
+    const verificationStatus = String(pick?.verification?.status || "").toLowerCase();
+    if (verificationStatus) return verificationStatus;
+    const resultStatus = String(pick?.result || "").toLowerCase();
+    if (resultStatus && resultStatus !== "pending") return `result_${resultStatus}`;
+    return "pending";
+  }
+
+  function getStatusFilterLabel(statusValue) {
+    const status = String(statusValue || "").toLowerCase();
+    if (!status) return "N/D";
+    if (status.startsWith("result_")) {
+      return `RESULTADO ${getHumanResultLabel(status.replace("result_", "") || "pending")}`;
+    }
+    return getVerificationStatusLabel(status);
+  }
+
+  const sportOptions = Array.from(new Set(
+    allPicks
+      .map((p)=>String(p?.sport || p?.league || "").trim())
+      .filter(Boolean)
+  )).sort((a,b)=>a.localeCompare(b, "es", { sensitivity: "base" }));
+  const statusOptions = Array.from(new Set(
+    allPicks
+      .map((p)=>getPickStatusForFilter(p))
+      .filter(Boolean)
+  )).sort((a,b)=>a.localeCompare(b, "es", { sensitivity: "base" }));
+
+  function filterAndSortPicks(list) {
+    const searchText = String(filters.search || "").trim().toLowerCase();
+    const statusFilter = String(filters.status || "all").toLowerCase();
+    const sportFilter = String(filters.sport || "all").toLowerCase();
+    const minConfidence = Number(filters.minConfidence);
+
+    const filtered = (Array.isArray(list) ? list : []).filter((pick)=>{
+      const pickStatus = getPickStatusForFilter(pick);
+      const pickSport = String(pick?.sport || pick?.league || "").toLowerCase();
+      const pickConfidence = getPickConfidence(pick);
+      const haystack = `${pick?.match || ""} ${pick?.league || ""} ${pick?.sport || ""} ${pick?.tipster || ""} ${pick?.bet?.marketType || ""} ${pick?.bet?.selection || ""}`.toLowerCase();
+      if (searchText && !haystack.includes(searchText)) return false;
+      if (statusFilter !== "all" && pickStatus !== statusFilter) return false;
+      if (sportFilter !== "all" && pickSport !== sportFilter) return false;
+      if (Number.isFinite(minConfidence) && minConfidence > 0 && pickConfidence < minConfidence) return false;
+      return true;
+    });
+
+    const sorted = [...filtered];
+    sorted.sort((a, b)=>{
+      const dateA = new Date(a?.createdAt || 0).getTime();
+      const dateB = new Date(b?.createdAt || 0).getTime();
+      const confidenceA = getPickConfidence(a);
+      const confidenceB = getPickConfidence(b);
+      const statusA = getPickStatusForFilter(a);
+      const statusB = getPickStatusForFilter(b);
+      if (filters.sort === "oldest") return dateA - dateB;
+      if (filters.sort === "confidence_desc") return confidenceB - confidenceA;
+      if (filters.sort === "confidence_asc") return confidenceA - confidenceB;
+      if (filters.sort === "status") return statusA.localeCompare(statusB, "es");
+      return dateB - dateA;
+    });
+    return sorted;
+  }
+
+  const historyItems = allPicks.filter((p)=>p.result!=="pending" || String(p.verification?.status||"").toLowerCase()==="reopened");
+  const filteredPendingPicks = filterAndSortPicks(pendingPicks);
+  const filteredHistoryPicks = filterAndSortPicks(historyItems);
+  const selectedSet = new Set(selectedPickIds);
+
+  function togglePickSelection(pickId) {
+    const normalized = String(pickId || "");
+    if (!normalized) return;
+    setSelectedPickIds((prev)=>prev.includes(normalized) ? prev.filter((id)=>id!==normalized) : [...prev, normalized]);
+  }
+
+  function selectAllFromList(list) {
+    const ids = (Array.isArray(list) ? list : []).map((item)=>String(item?._id || "")).filter(Boolean);
+    if (!ids.length) return;
+    setSelectedPickIds((prev)=>{
+      const merged = new Set([...(Array.isArray(prev) ? prev : []), ...ids]);
+      return Array.from(merged);
+    });
+  }
+
+  function clearSelection() {
+    setSelectedPickIds([]);
+  }
+
+  async function runBulkResult(result) {
+    if (bulkBusy || selectedPickIds.length===0) return;
+    if (!window.confirm(`Aplicar ${String(result).toUpperCase()} a ${selectedPickIds.length} picks seleccionados?`)) return;
+    setBulkBusy(true);
+    try {
+      const token = localStorage.getItem("tpz_token");
+      const r = await fetch(BACKEND_URL+"/api/admin/picks/bulk-result",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},
+        body:JSON.stringify({ pickIds: selectedPickIds, result })
+      });
+      const data = await r.json().catch(()=>null);
+      if(!r.ok || !data?.success) throw new Error(data?.error || "No se pudo aplicar acción masiva");
+      alert(`Actualizados: ${Number(data?.summary?.updated||0)} · Fallidos: ${Number(data?.summary?.failed||0)}`);
+      clearSelection();
+      loadData();
+      if (tab === "monitor") refreshVerificationMonitor(false);
+    } catch (e) {
+      alert(e.message || "Error en acción masiva");
+    }
+    setBulkBusy(false);
+  }
+
+  async function runBulkResetPending() {
+    if (bulkBusy || selectedPickIds.length===0) return;
+    if (!window.confirm(`Restablecer a PENDIENTE ${selectedPickIds.length} picks seleccionados?`)) return;
+    setBulkBusy(true);
+    try {
+      const token = localStorage.getItem("tpz_token");
+      const responses = await Promise.all(
+        selectedPickIds.map((pickId)=>
+          fetch(BACKEND_URL+"/api/picks/"+pickId+"/result",{
+            method:"PUT",
+            headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},
+            body:JSON.stringify({result:"pending"})
+          }).then((res)=>res.ok).catch(()=>false)
+        )
+      );
+      const updated = responses.filter(Boolean).length;
+      const failed = responses.length - updated;
+      alert(`Restablecidos: ${updated} · Fallidos: ${failed}`);
+      clearSelection();
+      loadData();
+      if (tab === "monitor") refreshVerificationMonitor(false);
+    } catch (e) {
+      alert(e.message || "Error al restablecer selección");
+    }
+    setBulkBusy(false);
+  }
+
+  async function runBulkAnalyze() {
+    if (bulkBusy || selectedPickIds.length===0) return;
+    setBulkBusy(true);
+    try {
+      const token = localStorage.getItem("tpz_token");
+      const r = await fetch(BACKEND_URL+"/api/admin/picks/bulk-analyze",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},
+        body:JSON.stringify({ pickIds: selectedPickIds })
+      });
+      const data = await r.json().catch(()=>null);
+      if(!r.ok || !data?.success) throw new Error(data?.error || "No se pudo re-analizar selección");
+      alert(`Re-analizados: ${Number(data?.summary?.analyzed||0)} · Auto-cerrados: ${Number(data?.summary?.autoClosed||0)}`);
+      clearSelection();
+      loadData();
+      if (tab === "monitor") refreshVerificationMonitor(false);
+    } catch (e) {
+      alert(e.message || "Error en re-análisis masivo");
+    }
+    setBulkBusy(false);
+  }
+
+  async function refreshVerificationMonitor(showLoader = true) {
+    const token = localStorage.getItem("tpz_token");
+    if (!token) {
+      setMonitorError("Sesión expirada. Inicia sesión nuevamente.");
+      return;
+    }
+    if (showLoader) setMonitorLoading(true);
+    try {
+      const monitorResponse = await fetch(BACKEND_URL+"/api/admin/picks-monitor",{
+        headers:{"Authorization":"Bearer "+token}
+      });
+      const monitorData = await monitorResponse.json().catch(()=>null);
+      if(!monitorResponse.ok) throw new Error(monitorData?.error || "No se pudo cargar monitor");
+      setMonitorSnapshot({
+        thresholds: monitorData?.thresholds || {},
+        totals: monitorData?.totals || {},
+        statusCounts: Array.isArray(monitorData?.statusCounts) ? monitorData.statusCounts : [],
+        stalePicks: Array.isArray(monitorData?.stalePicks) ? monitorData.stalePicks : []
+      });
+
+      const alertsResponse = await fetch(BACKEND_URL+"/api/admin/verification-alerts",{
+        headers:{"Authorization":"Bearer "+token}
+      });
+      const alertsData = await alertsResponse.json().catch(()=>null);
+      if(alertsResponse.ok) {
+        setAlertsFeed(Array.isArray(alertsData?.alerts) ? alertsData.alerts : []);
+      }
+      setMonitorError("");
+    } catch (e) {
+      setMonitorError(e.message || "Error cargando monitor operativo");
+    }
+    if (showLoader) setMonitorLoading(false);
+  }
+
+  useEffect(()=>{
+    if (tab !== "monitor") return;
+    refreshVerificationMonitor(true);
+  },[tab]);
+
+  useEffect(()=>{
+    setSelectedPickIds([]);
+  },[tab]);
+
+  async function reanalyzeStalePicks() {
+    if (reanalyzingStale) return;
+    setReanalyzingStale(true);
+    try {
+      const token = localStorage.getItem("tpz_token");
+      const r = await fetch(BACKEND_URL+"/api/admin/picks/reanalyze-stale",{
+        method:"POST",
+        headers:{"Authorization":"Bearer "+token}
+      });
+      const data = await r.json().catch(()=>null);
+      if(!r.ok || !data?.success) throw new Error(data?.error || "No se pudo reanalizar picks atascados");
+      alert(`Stale re-analizados: ${Number(data?.summary?.analyzed||0)} · Auto-cerrados: ${Number(data?.summary?.autoClosed||0)}`);
+      loadData();
+      refreshVerificationMonitor(false);
+    } catch (e) {
+      alert(e.message || "Error al reanalizar picks atascados");
+    }
+    setReanalyzingStale(false);
+  }
+
   const totalRevenue = allPicks.filter(p=>p.result!=="pending").reduce((s,p)=>s+(p.buyers?.length||0)*parseFloat(p.price||0),0);
   const tabStyle = t=>({background:tab===t?"var(--g)":"transparent",color:tab===t?"#000":"var(--muted)",border:"none",padding:"8px 18px",borderRadius:6,cursor:"pointer",fontSize:"0.78rem",fontWeight:700,letterSpacing:1,textTransform:"uppercase"});
 
@@ -2663,9 +2910,9 @@ function AdminPanel({ setView, user, picks }) {
           ))}
         </div>
         <div style={{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap"}}>
-          {["results","history","payouts","users"].map(t=>(
+          {["results","history","monitor","payouts","users"].map(t=>(
             <button key={t} onClick={()=>setTab(t)} style={tabStyle(t)}>
-              {t==="results"?"Resultados":t==="history"?"Historial":t==="payouts"?"Pagos":"Usuarios"}
+              {t==="results"?"Resultados":t==="history"?"Historial":t==="monitor"?"Monitor":t==="payouts"?"Pagos":"Usuarios"}
             </button>
           ))}
         </div>
@@ -2673,14 +2920,51 @@ function AdminPanel({ setView, user, picks }) {
         {tab==="results"&&(
           <div>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-              <div style={{fontSize:"0.82rem",color:"var(--muted)"}}>{pendingPicks.length} picks pendientes</div>
+              <div style={{fontSize:"0.82rem",color:"var(--muted)"}}>{filteredPendingPicks.length} de {pendingPicks.length} picks pendientes</div>
               <div style={{display:"flex",gap:8}}>
                 <button onClick={async()=>{const token=localStorage.getItem("tpz_token");const r=await fetch(BACKEND_URL+"/api/admin/analyze-picks",{method:"POST",headers:{"Authorization":"Bearer "+token}});const data=await r.json().catch(()=>({}));if(!r.ok){alert(data.error||"Error al analizar picks");return;}const analyzedCount=Number(data.analyzedCount ?? data.analyzed ?? data.total ?? 0);alert(analyzedCount>0?`Análisis completado: ${analyzedCount} picks`:"Análisis completado");loadData();}} style={{background:"rgba(29,185,84,0.15)",border:"1px solid var(--g)",color:"var(--g)",padding:"6px 14px",borderRadius:6,cursor:"pointer",fontSize:"0.75rem",fontWeight:700}}>Analizar</button>
                 <button onClick={resetStats} disabled={resetting} style={{background:"rgba(244,67,54,0.15)",border:"1px solid #f44336",color:"#f44336",padding:"6px 14px",borderRadius:6,cursor:"pointer",fontSize:"0.75rem",fontWeight:700}}>{resetting?"...":"Reset Stats"}</button>
               </div>
             </div>
-            {pendingPicks.length===0&&<div style={{textAlign:"center",color:"var(--muted)",padding:40}}>No hay picks pendientes</div>}
-            {pendingPicks.map((p,i)=>{
+            <div style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:12,marginBottom:12}}>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:8}}>
+                <input value={filters.search} onChange={(e)=>setFilters((prev)=>({...prev,search:e.target.value}))} placeholder="Buscar match / tipster / mercado" style={{background:"var(--d4)",border:"1px solid var(--border)",borderRadius:6,padding:"8px 10px",color:"var(--text)",fontSize:"0.78rem",outline:"none"}} />
+                <select value={filters.status} onChange={(e)=>setFilters((prev)=>({...prev,status:e.target.value}))} style={{background:"var(--d4)",border:"1px solid var(--border)",borderRadius:6,padding:"8px 10px",color:"var(--text)",fontSize:"0.78rem",outline:"none"}}>
+                  <option value="all">Todos los estatus</option>
+                  {statusOptions.map((statusValue)=>(
+                    <option key={statusValue} value={statusValue}>{getStatusFilterLabel(statusValue)}</option>
+                  ))}
+                </select>
+                <select value={filters.sport} onChange={(e)=>setFilters((prev)=>({...prev,sport:e.target.value}))} style={{background:"var(--d4)",border:"1px solid var(--border)",borderRadius:6,padding:"8px 10px",color:"var(--text)",fontSize:"0.78rem",outline:"none"}}>
+                  <option value="all">Todos los deportes</option>
+                  {sportOptions.map((sportValue)=>(
+                    <option key={sportValue} value={sportValue}>{sportValue}</option>
+                  ))}
+                </select>
+                <input type="number" min="0" max="100" step="1" value={filters.minConfidence} onChange={(e)=>setFilters((prev)=>({...prev,minConfidence:e.target.value}))} placeholder="Confianza mínima %" style={{background:"var(--d4)",border:"1px solid var(--border)",borderRadius:6,padding:"8px 10px",color:"var(--text)",fontSize:"0.78rem",outline:"none"}} />
+                <select value={filters.sort} onChange={(e)=>setFilters((prev)=>({...prev,sort:e.target.value}))} style={{background:"var(--d4)",border:"1px solid var(--border)",borderRadius:6,padding:"8px 10px",color:"var(--text)",fontSize:"0.78rem",outline:"none"}}>
+                  <option value="newest">Más nuevos</option>
+                  <option value="oldest">Más antiguos</option>
+                  <option value="confidence_desc">Confianza IA ↓</option>
+                  <option value="confidence_asc">Confianza IA ↑</option>
+                  <option value="status">Estatus</option>
+                </select>
+                <button onClick={()=>setFilters({search:"",status:"all",sport:"all",minConfidence:"",sort:"newest"})} style={{background:"none",border:"1px solid var(--g)",color:"var(--g)",padding:"8px 12px",borderRadius:6,cursor:"pointer",fontSize:"0.75rem",fontWeight:700}}>Limpiar filtros</button>
+              </div>
+            </div>
+            <div style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:12,marginBottom:12,display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+              <div style={{fontSize:"0.74rem",color:"var(--muted)"}}>Seleccionados: {selectedPickIds.length}</div>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                <button onClick={()=>selectAllFromList(filteredPendingPicks)} disabled={filteredPendingPicks.length===0} style={{background:"var(--d4)",border:"1px solid var(--border)",color:filteredPendingPicks.length===0?"var(--muted)":"var(--text)",padding:"6px 10px",borderRadius:6,cursor:filteredPendingPicks.length===0?"not-allowed":"pointer",fontSize:"0.72rem",fontWeight:700}}>Seleccionar visibles</button>
+                <button onClick={clearSelection} disabled={selectedPickIds.length===0} style={{background:"var(--d4)",border:"1px solid var(--border)",color:selectedPickIds.length===0?"var(--muted)":"var(--text)",padding:"6px 10px",borderRadius:6,cursor:selectedPickIds.length===0?"not-allowed":"pointer",fontSize:"0.72rem",fontWeight:700}}>Limpiar selección</button>
+                <button onClick={()=>runBulkResult("won")} disabled={bulkBusy || selectedPickIds.length===0} style={{background:"rgba(29,185,84,0.15)",border:"1px solid var(--g)",color:"var(--g)",padding:"6px 10px",borderRadius:6,cursor:bulkBusy || selectedPickIds.length===0?"not-allowed":"pointer",fontSize:"0.72rem",fontWeight:700}}>Masivo GANADO</button>
+                <button onClick={()=>runBulkResult("lost")} disabled={bulkBusy || selectedPickIds.length===0} style={{background:"rgba(244,67,54,0.15)",border:"1px solid #f44336",color:"#f44336",padding:"6px 10px",borderRadius:6,cursor:bulkBusy || selectedPickIds.length===0?"not-allowed":"pointer",fontSize:"0.72rem",fontWeight:700}}>Masivo PERDIDO</button>
+                <button onClick={()=>runBulkResult("void")} disabled={bulkBusy || selectedPickIds.length===0} style={{background:"rgba(245,197,66,0.15)",border:"1px solid var(--gold)",color:"var(--gold)",padding:"6px 10px",borderRadius:6,cursor:bulkBusy || selectedPickIds.length===0?"not-allowed":"pointer",fontSize:"0.72rem",fontWeight:700}}>Masivo VOID</button>
+                <button onClick={runBulkAnalyze} disabled={bulkBusy || selectedPickIds.length===0} style={{background:"rgba(100,100,255,0.15)",border:"1px solid #6464ff",color:"#8b8bff",padding:"6px 10px",borderRadius:6,cursor:bulkBusy || selectedPickIds.length===0?"not-allowed":"pointer",fontSize:"0.72rem",fontWeight:700}}>Re-analizar selección</button>
+              </div>
+            </div>
+            {filteredPendingPicks.length===0&&<div style={{textAlign:"center",color:"var(--muted)",padding:40}}>No hay picks pendientes con los filtros actuales</div>}
+            {filteredPendingPicks.map((p,i)=>{
               const verification = p.verification || {};
               const statusLabel = getVerificationStatusLabel(verification.status);
               const statusStyle = getVerificationStatusStyle(verification.status);
@@ -2698,6 +2982,10 @@ function AdminPanel({ setView, user, picks }) {
               return (
                 <div key={p._id||i} style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:16,marginBottom:10}}>
                   <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:10}}>
+                    <label style={{display:"flex",alignItems:"center",gap:6,fontSize:"0.68rem",color:"var(--muted)"}}>
+                      <input type="checkbox" checked={selectedSet.has(String(p._id || ""))} onChange={()=>togglePickSelection(p._id)} />
+                      Sel
+                    </label>
                     {p.ticketImg&&<img src={p.ticketImg} alt="ticket" style={{width:100,height:70,objectFit:"cover",borderRadius:6,cursor:"pointer"}} onClick={()=>{const d=document.createElement("div");d.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:pointer";d.onclick=()=>document.body.removeChild(d);const img=document.createElement("img");img.src=p.ticketImg;img.style.cssText="max-width:90vw;max-height:90vh;object-fit:contain";d.appendChild(img);document.body.appendChild(d);}}/>}
                     <div style={{flex:1}}>
                       <div style={{fontWeight:700,fontSize:"0.9rem",marginBottom:4}}>{p.match}</div>
@@ -2747,82 +3035,208 @@ function AdminPanel({ setView, user, picks }) {
           </div>
         )}
 
-        {tab==="history"&&(()=>{
-          const historyItems = allPicks.filter((p)=>p.result!=="pending" || String(p.verification?.status||"").toLowerCase()==="reopened");
-          return (
-            <div>
-              <div style={{marginBottom:16,fontSize:"0.82rem",color:"var(--muted)"}}>{historyItems.length} picks en historial</div>
-              {historyItems.map((p,i)=>{
-                const verification = p.verification || {};
-                const statusLabel = getVerificationStatusLabel(verification.status);
-                const statusStyle = getVerificationStatusStyle(verification.status);
-                const resultLabel = getHumanResultLabel(p.result);
-                const resultStyle = p.result==="won"
-                  ? {background:"rgba(29,185,84,0.15)",color:"var(--g)"}
-                  : p.result==="lost"
-                    ? {background:"rgba(244,67,54,0.15)",color:"#f44336"}
-                    : p.result==="void"
-                      ? {background:"rgba(245,197,66,0.15)",color:"var(--gold)"}
-                      : {background:"rgba(107,128,120,0.15)",color:"var(--muted)"};
-                const preliminaryVerdict = verification.preliminaryResult || verification.preliminaryVerdict || p.aiAnalysis?.resultado || "";
-                const preliminaryConfidenceValue = verification.confidence ?? verification.preliminaryConfidence ?? p.aiAnalysis?.confianza;
-                const preliminaryConfidence = Number(preliminaryConfidenceValue);
-                const preliminaryConfidenceText = Number.isFinite(preliminaryConfidence) ? ` (${preliminaryConfidence}%)` : "";
-                const betSummary = [p.bet?.marketType, p.bet?.selection].filter(Boolean).join(" · ");
-                const evidenceItems = Array.isArray(verification.evidence) && verification.evidence.length>0
-                  ? verification.evidence
-                  : (Array.isArray(p.aiAnalysis?.evidence) ? p.aiAnalysis.evidence : []);
-                const closureReason = verification.closureReason || verification.summary || "";
-                const reopenedBy = verification.reopenedBy ? ` por ${verification.reopenedBy}` : "";
-                const reopenedAt = verification.reopenedAt ? ` · ${new Date(verification.reopenedAt).toLocaleString("es-MX")}` : "";
-                return (
-                  <div key={p._id||i} style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:"14px 16px",marginBottom:8}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8,marginBottom:6}}>
+        {tab==="history"&&(
+          <div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+              <div style={{fontSize:"0.82rem",color:"var(--muted)"}}>{filteredHistoryPicks.length} de {historyItems.length} picks en historial</div>
+              <button onClick={loadData} style={{background:"var(--d4)",border:"1px solid var(--border)",color:"var(--text)",padding:"6px 12px",borderRadius:6,cursor:"pointer",fontSize:"0.74rem",fontWeight:700}}>↻ Refrescar</button>
+            </div>
+            <div style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:12,marginBottom:12}}>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:8}}>
+                <input value={filters.search} onChange={(e)=>setFilters((prev)=>({...prev,search:e.target.value}))} placeholder="Buscar match / tipster / mercado" style={{background:"var(--d4)",border:"1px solid var(--border)",borderRadius:6,padding:"8px 10px",color:"var(--text)",fontSize:"0.78rem",outline:"none"}} />
+                <select value={filters.status} onChange={(e)=>setFilters((prev)=>({...prev,status:e.target.value}))} style={{background:"var(--d4)",border:"1px solid var(--border)",borderRadius:6,padding:"8px 10px",color:"var(--text)",fontSize:"0.78rem",outline:"none"}}>
+                  <option value="all">Todos los estatus</option>
+                  {statusOptions.map((statusValue)=>(
+                    <option key={statusValue} value={statusValue}>{getStatusFilterLabel(statusValue)}</option>
+                  ))}
+                </select>
+                <select value={filters.sport} onChange={(e)=>setFilters((prev)=>({...prev,sport:e.target.value}))} style={{background:"var(--d4)",border:"1px solid var(--border)",borderRadius:6,padding:"8px 10px",color:"var(--text)",fontSize:"0.78rem",outline:"none"}}>
+                  <option value="all">Todos los deportes</option>
+                  {sportOptions.map((sportValue)=>(
+                    <option key={sportValue} value={sportValue}>{sportValue}</option>
+                  ))}
+                </select>
+                <input type="number" min="0" max="100" step="1" value={filters.minConfidence} onChange={(e)=>setFilters((prev)=>({...prev,minConfidence:e.target.value}))} placeholder="Confianza mínima %" style={{background:"var(--d4)",border:"1px solid var(--border)",borderRadius:6,padding:"8px 10px",color:"var(--text)",fontSize:"0.78rem",outline:"none"}} />
+                <select value={filters.sort} onChange={(e)=>setFilters((prev)=>({...prev,sort:e.target.value}))} style={{background:"var(--d4)",border:"1px solid var(--border)",borderRadius:6,padding:"8px 10px",color:"var(--text)",fontSize:"0.78rem",outline:"none"}}>
+                  <option value="newest">Más nuevos</option>
+                  <option value="oldest">Más antiguos</option>
+                  <option value="confidence_desc">Confianza IA ↓</option>
+                  <option value="confidence_asc">Confianza IA ↑</option>
+                  <option value="status">Estatus</option>
+                </select>
+                <button onClick={()=>setFilters({search:"",status:"all",sport:"all",minConfidence:"",sort:"newest"})} style={{background:"none",border:"1px solid var(--g)",color:"var(--g)",padding:"8px 12px",borderRadius:6,cursor:"pointer",fontSize:"0.75rem",fontWeight:700}}>Limpiar filtros</button>
+              </div>
+            </div>
+            <div style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:12,marginBottom:12,display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+              <div style={{fontSize:"0.74rem",color:"var(--muted)"}}>Seleccionados: {selectedPickIds.length}</div>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                <button onClick={()=>selectAllFromList(filteredHistoryPicks)} disabled={filteredHistoryPicks.length===0} style={{background:"var(--d4)",border:"1px solid var(--border)",color:filteredHistoryPicks.length===0?"var(--muted)":"var(--text)",padding:"6px 10px",borderRadius:6,cursor:filteredHistoryPicks.length===0?"not-allowed":"pointer",fontSize:"0.72rem",fontWeight:700}}>Seleccionar visibles</button>
+                <button onClick={clearSelection} disabled={selectedPickIds.length===0} style={{background:"var(--d4)",border:"1px solid var(--border)",color:selectedPickIds.length===0?"var(--muted)":"var(--text)",padding:"6px 10px",borderRadius:6,cursor:selectedPickIds.length===0?"not-allowed":"pointer",fontSize:"0.72rem",fontWeight:700}}>Limpiar selección</button>
+                <button onClick={runBulkResetPending} disabled={bulkBusy || selectedPickIds.length===0} style={{background:"rgba(100,100,255,0.15)",border:"1px solid #6464ff",color:"#8b8bff",padding:"6px 10px",borderRadius:6,cursor:bulkBusy || selectedPickIds.length===0?"not-allowed":"pointer",fontSize:"0.72rem",fontWeight:700}}>Restablecer selección</button>
+                <button onClick={runBulkAnalyze} disabled={bulkBusy || selectedPickIds.length===0} style={{background:"rgba(245,197,66,0.15)",border:"1px solid var(--gold)",color:"var(--gold)",padding:"6px 10px",borderRadius:6,cursor:bulkBusy || selectedPickIds.length===0?"not-allowed":"pointer",fontSize:"0.72rem",fontWeight:700}}>Re-analizar selección</button>
+              </div>
+            </div>
+            {filteredHistoryPicks.length===0&&<div style={{textAlign:"center",color:"var(--muted)",padding:40}}>No hay picks en historial con los filtros actuales</div>}
+            {filteredHistoryPicks.map((p,i)=>{
+              const verification = p.verification || {};
+              const statusLabel = getVerificationStatusLabel(verification.status);
+              const statusStyle = getVerificationStatusStyle(verification.status);
+              const resultLabel = getHumanResultLabel(p.result);
+              const resultStyle = p.result==="won"
+                ? {background:"rgba(29,185,84,0.15)",color:"var(--g)"}
+                : p.result==="lost"
+                  ? {background:"rgba(244,67,54,0.15)",color:"#f44336"}
+                  : p.result==="void"
+                    ? {background:"rgba(245,197,66,0.15)",color:"var(--gold)"}
+                    : {background:"rgba(107,128,120,0.15)",color:"var(--muted)"};
+              const preliminaryVerdict = verification.preliminaryResult || verification.preliminaryVerdict || p.aiAnalysis?.resultado || "";
+              const preliminaryConfidenceValue = verification.confidence ?? verification.preliminaryConfidence ?? p.aiAnalysis?.confianza;
+              const preliminaryConfidence = Number(preliminaryConfidenceValue);
+              const preliminaryConfidenceText = Number.isFinite(preliminaryConfidence) ? ` (${preliminaryConfidence}%)` : "";
+              const betSummary = [p.bet?.marketType, p.bet?.selection].filter(Boolean).join(" · ");
+              const evidenceItems = Array.isArray(verification.evidence) && verification.evidence.length>0
+                ? verification.evidence
+                : (Array.isArray(p.aiAnalysis?.evidence) ? p.aiAnalysis.evidence : []);
+              const closureReason = verification.closureReason || verification.summary || "";
+              const reopenedBy = verification.reopenedBy ? ` por ${verification.reopenedBy}` : "";
+              const reopenedAt = verification.reopenedAt ? ` · ${new Date(verification.reopenedAt).toLocaleString("es-MX")}` : "";
+              return (
+                <div key={p._id||i} style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:"14px 16px",marginBottom:8}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8,marginBottom:6}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                      <label style={{display:"flex",alignItems:"center",gap:6,fontSize:"0.68rem",color:"var(--muted)"}}>
+                        <input type="checkbox" checked={selectedSet.has(String(p._id || ""))} onChange={()=>togglePickSelection(p._id)} />
+                        Sel
+                      </label>
                       <div>
                         <div style={{fontWeight:700,fontSize:"0.9rem"}}>{p.match}</div>
                         <div style={{fontSize:"0.72rem",color:"var(--muted)",marginTop:2}}>{p.league} · {p.tipster} · Momio {p.odds}</div>
                       </div>
-                      <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",justifyContent:"flex-end"}}>
-                        <span style={{...resultStyle,padding:"4px 12px",borderRadius:6,fontSize:"0.75rem",fontWeight:700}}>{resultLabel}</span>
-                        <span style={{...statusStyle,padding:"4px 10px",borderRadius:6,fontSize:"0.72rem",fontWeight:700}}>{statusLabel}</span>
-                      </div>
                     </div>
-                    {preliminaryVerdict && (
-                      <div style={{fontSize:"0.7rem",color:"var(--gold)",marginBottom:4}}>
-                        Preliminar IA: {getPreliminaryVerdictLabel(preliminaryVerdict)}{preliminaryConfidenceText}
-                      </div>
-                    )}
-                    {betSummary && <div style={{fontSize:"0.68rem",color:"var(--text-dim)",marginBottom:4}}>Mercado: {betSummary}</div>}
-                    {closureReason && <div style={{fontSize:"0.68rem",color:"var(--text-dim)",marginBottom:4}}>Resumen: {closureReason}</div>}
-                    {String(verification.status||"").toLowerCase()==="reopened" && (
-                      <div style={{fontSize:"0.68rem",color:"#8b8bff",marginBottom:6}}>Inconformidad / reapertura{reopenedBy}{reopenedAt}</div>
-                    )}
-                    <div style={{background:"var(--d4)",border:"1px solid var(--border)",borderRadius:6,padding:"6px 8px",marginTop:6}}>
-                      <div style={{fontSize:"0.66rem",color:"var(--muted)",marginBottom:4}}>Evidencia ({evidenceItems.length})</div>
-                      {evidenceItems.length>0 ? (
-                        <>
-                          {evidenceItems.slice(0,3).map((item,idx)=>(
-                            <div key={idx} style={{fontSize:"0.68rem",color:"var(--text-dim)",lineHeight:1.5}}>• {getEvidenceText(item)}</div>
-                          ))}
-                          {evidenceItems.length>3 && <div style={{fontSize:"0.68rem",color:"var(--muted)"}}>+{evidenceItems.length-3} evidencias más</div>}
-                        </>
-                      ) : (
-                        <div style={{fontSize:"0.68rem",color:"var(--muted)"}}>Sin evidencia disponible</div>
-                      )}
-                    </div>
-                    <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginTop:6}}>
-                      {p.result!=="pending" ? (
-                        <button onClick={async()=>{if(!window.confirm("¿Restablecer?"))return;const token=localStorage.getItem("tpz_token");const r=await fetch(BACKEND_URL+"/api/picks/"+p._id+"/result",{method:"PUT",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({result:"pending"})});if(r.ok){alert("Restablecido");loadData();}}} style={{background:"rgba(100,100,255,0.15)",border:"1px solid #6464ff",color:"#6464ff",padding:"4px 10px",borderRadius:6,cursor:"pointer",fontSize:"0.72rem",fontWeight:700}}>Restablecer</button>
-                      ) : (
-                        <button onClick={()=>reanalyze(p._id)} style={{background:"rgba(245,197,66,0.15)",border:"1px solid var(--gold)",color:"var(--gold)",padding:"4px 10px",borderRadius:6,cursor:"pointer",fontSize:"0.72rem",fontWeight:700}}>Re-analizar</button>
-                      )}
+                    <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",justifyContent:"flex-end"}}>
+                      <span style={{...resultStyle,padding:"4px 12px",borderRadius:6,fontSize:"0.75rem",fontWeight:700}}>{resultLabel}</span>
+                      <span style={{...statusStyle,padding:"4px 10px",borderRadius:6,fontSize:"0.72rem",fontWeight:700}}>{statusLabel}</span>
                     </div>
                   </div>
-                );
-              })}
+                  {preliminaryVerdict && (
+                    <div style={{fontSize:"0.7rem",color:"var(--gold)",marginBottom:4}}>
+                      Preliminar IA: {getPreliminaryVerdictLabel(preliminaryVerdict)}{preliminaryConfidenceText}
+                    </div>
+                  )}
+                  {betSummary && <div style={{fontSize:"0.68rem",color:"var(--text-dim)",marginBottom:4}}>Mercado: {betSummary}</div>}
+                  {closureReason && <div style={{fontSize:"0.68rem",color:"var(--text-dim)",marginBottom:4}}>Resumen: {closureReason}</div>}
+                  {String(verification.status||"").toLowerCase()==="reopened" && (
+                    <div style={{fontSize:"0.68rem",color:"#8b8bff",marginBottom:6}}>Inconformidad / reapertura{reopenedBy}{reopenedAt}</div>
+                  )}
+                  <div style={{background:"var(--d4)",border:"1px solid var(--border)",borderRadius:6,padding:"6px 8px",marginTop:6}}>
+                    <div style={{fontSize:"0.66rem",color:"var(--muted)",marginBottom:4}}>Evidencia ({evidenceItems.length})</div>
+                    {evidenceItems.length>0 ? (
+                      <>
+                        {evidenceItems.slice(0,3).map((item,idx)=>(
+                          <div key={idx} style={{fontSize:"0.68rem",color:"var(--text-dim)",lineHeight:1.5}}>• {getEvidenceText(item)}</div>
+                        ))}
+                        {evidenceItems.length>3 && <div style={{fontSize:"0.68rem",color:"var(--muted)"}}>+{evidenceItems.length-3} evidencias más</div>}
+                      </>
+                    ) : (
+                      <div style={{fontSize:"0.68rem",color:"var(--muted)"}}>Sin evidencia disponible</div>
+                    )}
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginTop:6}}>
+                    <button onClick={async()=>{if(!window.confirm("¿Restablecer a pendiente?"))return;const token=localStorage.getItem("tpz_token");const r=await fetch(BACKEND_URL+"/api/picks/"+p._id+"/result",{method:"PUT",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({result:"pending"})});if(r.ok){alert("Restablecido");loadData();if(tab==="monitor")refreshVerificationMonitor(false);}else{alert("No se pudo restablecer");}}} style={{background:"rgba(100,100,255,0.15)",border:"1px solid #6464ff",color:"#6464ff",padding:"4px 10px",borderRadius:6,cursor:"pointer",fontSize:"0.72rem",fontWeight:700}}>Restablecer</button>
+                    <button onClick={()=>reanalyze(p._id)} style={{background:"rgba(245,197,66,0.15)",border:"1px solid var(--gold)",color:"var(--gold)",padding:"4px 10px",borderRadius:6,cursor:"pointer",fontSize:"0.72rem",fontWeight:700}}>Re-analizar</button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {tab==="monitor"&&(
+          <div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:12}}>
+              <div style={{fontSize:"0.82rem",color:"var(--muted)"}}>Monitor operativo y alertas de verificación</div>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                <button onClick={()=>refreshVerificationMonitor(true)} disabled={monitorLoading} style={{background:"var(--d4)",border:"1px solid var(--border)",color:monitorLoading?"var(--muted)":"var(--text)",padding:"6px 12px",borderRadius:6,cursor:monitorLoading?"not-allowed":"pointer",fontSize:"0.74rem",fontWeight:700}}>↻ Refrescar</button>
+                <button onClick={reanalyzeStalePicks} disabled={reanalyzingStale} style={{background:"rgba(245,197,66,0.15)",border:"1px solid var(--gold)",color:"var(--gold)",padding:"6px 12px",borderRadius:6,cursor:reanalyzingStale?"not-allowed":"pointer",fontSize:"0.74rem",fontWeight:700}}>{reanalyzingStale?"Procesando...":"Reprocesar stale"}</button>
+              </div>
             </div>
-          );
-        })()}
+            {monitorError && <div style={{background:"rgba(244,67,54,0.1)",border:"1px solid #f44336",color:"#f44336",padding:"9px 12px",borderRadius:8,marginBottom:12,fontSize:"0.8rem"}}>{monitorError}</div>}
+            {monitorLoading && <div style={{textAlign:"center",color:"var(--muted)",padding:26}}>Cargando monitor...</div>}
+            {!monitorLoading && (
+              <>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:10,marginBottom:12}}>
+                  {[
+                    ["Pending", Number(monitorSnapshot?.totals?.pending || 0)],
+                    ["Preliminar listo", Number(monitorSnapshot?.totals?.preliminaryReady || 0)],
+                    ["Needs review", Number(monitorSnapshot?.totals?.needsReview || 0)],
+                    ["Stale", Number(monitorSnapshot?.totals?.staleCount || 0)]
+                  ].map(([label,value])=>(
+                    <div key={label} style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:"14px 12px",textAlign:"center"}}>
+                      <div style={{fontFamily:"'Bebas Neue'",fontSize:"1.5rem",color:"var(--g)"}}>{value}</div>
+                      <div style={{fontSize:"0.64rem",color:"var(--muted)",letterSpacing:1}}>{label}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:12,marginBottom:12}}>
+                  <div style={{fontSize:"0.72rem",color:"var(--g)",fontWeight:700,letterSpacing:1.5,marginBottom:8}}>Distribución por estatus</div>
+                  {!Array.isArray(monitorSnapshot?.statusCounts) || monitorSnapshot.statusCounts.length===0 ? (
+                    <div style={{fontSize:"0.74rem",color:"var(--muted)"}}>Sin datos por estatus</div>
+                  ) : (
+                    <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                      {monitorSnapshot.statusCounts.map((row,idx)=>(
+                        <span key={idx} style={{background:"var(--d4)",border:"1px solid var(--border)",borderRadius:100,padding:"5px 10px",fontSize:"0.72rem",color:"var(--text)"}}>{getVerificationStatusLabel(row?.status)}: {Number(row?.count||0)}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:12,marginBottom:12}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:8}}>
+                    <div style={{fontSize:"0.72rem",color:"var(--gold)",fontWeight:700,letterSpacing:1.5}}>Picks atascados (stale)</div>
+                    <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                      <button onClick={()=>selectAllFromList(monitorSnapshot?.stalePicks||[])} disabled={!Array.isArray(monitorSnapshot?.stalePicks) || monitorSnapshot.stalePicks.length===0} style={{background:"var(--d4)",border:"1px solid var(--border)",color:!Array.isArray(monitorSnapshot?.stalePicks) || monitorSnapshot.stalePicks.length===0?"var(--muted)":"var(--text)",padding:"5px 10px",borderRadius:6,cursor:!Array.isArray(monitorSnapshot?.stalePicks) || monitorSnapshot.stalePicks.length===0?"not-allowed":"pointer",fontSize:"0.7rem",fontWeight:700}}>Seleccionar stale</button>
+                      <button onClick={runBulkAnalyze} disabled={bulkBusy || selectedPickIds.length===0} style={{background:"rgba(100,100,255,0.15)",border:"1px solid #6464ff",color:"#8b8bff",padding:"5px 10px",borderRadius:6,cursor:bulkBusy || selectedPickIds.length===0?"not-allowed":"pointer",fontSize:"0.7rem",fontWeight:700}}>Re-analizar selección</button>
+                      <button onClick={clearSelection} disabled={selectedPickIds.length===0} style={{background:"var(--d4)",border:"1px solid var(--border)",color:selectedPickIds.length===0?"var(--muted)":"var(--text)",padding:"5px 10px",borderRadius:6,cursor:selectedPickIds.length===0?"not-allowed":"pointer",fontSize:"0.7rem",fontWeight:700}}>Limpiar selección</button>
+                    </div>
+                  </div>
+                  {!Array.isArray(monitorSnapshot?.stalePicks) || monitorSnapshot.stalePicks.length===0 ? (
+                    <div style={{fontSize:"0.74rem",color:"var(--muted)",padding:"8px 0"}}>Sin picks stale.</div>
+                  ) : monitorSnapshot.stalePicks.map((pick,idx)=>(
+                    <div key={pick?._id||idx} style={{background:"var(--d4)",border:"1px solid var(--border)",borderRadius:8,padding:"10px",marginBottom:8}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                        <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                          <label style={{display:"flex",alignItems:"center",gap:6,fontSize:"0.68rem",color:"var(--muted)"}}>
+                            <input type="checkbox" checked={selectedSet.has(String(pick?._id || ""))} onChange={()=>togglePickSelection(pick?._id)} />
+                            Sel
+                          </label>
+                          <div>
+                            <div style={{fontSize:"0.82rem",fontWeight:700}}>{pick?.match || "Sin match"}</div>
+                            <div style={{fontSize:"0.7rem",color:"var(--muted)"}}>{pick?.league || ""} · {pick?.tipster || ""}</div>
+                          </div>
+                        </div>
+                        <div style={{fontSize:"0.7rem",color:"var(--gold)"}}>{Number(pick?.pendingMinutes||0)} min pending</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:12}}>
+                  <div style={{fontSize:"0.72rem",color:"var(--g)",fontWeight:700,letterSpacing:1.5,marginBottom:8}}>Feed de alertas</div>
+                  {!Array.isArray(alertsFeed) || alertsFeed.length===0 ? (
+                    <div style={{fontSize:"0.74rem",color:"var(--muted)",padding:"8px 0"}}>Sin alertas recientes.</div>
+                  ) : alertsFeed.map((alertItem,idx)=>(
+                    <div key={alertItem?._id||idx} style={{background:"var(--d4)",border:"1px solid var(--border)",borderRadius:8,padding:"10px",marginBottom:8}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                        <span style={{fontSize:"0.7rem",fontWeight:700,color:"var(--gold)"}}>{String(alertItem?.eventType || "evento").toUpperCase()}</span>
+                        <span style={{fontSize:"0.66rem",color:"var(--muted)"}}>{alertItem?.createdAt ? new Date(alertItem.createdAt).toLocaleString("es-MX") : ""}</span>
+                      </div>
+                      <div style={{fontSize:"0.78rem",color:"var(--text)",marginTop:4}}>{alertItem?.message || "Sin mensaje"}</div>
+                      {alertItem?.match && <div style={{fontSize:"0.68rem",color:"var(--text-dim)",marginTop:3}}>{alertItem.match}</div>}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
 
         {tab==="payouts"&&(
           <div>
