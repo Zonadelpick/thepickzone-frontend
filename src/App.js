@@ -2516,18 +2516,54 @@ function AdminPanel({ setView, user, picks }) {
   };
 
   useEffect(()=>{loadData();},[]);
+  async function runAnalyzePendingPicks() {
+    const token = localStorage.getItem("tpz_token");
+    if (!token) {
+      alert("Sesión expirada. Inicia sesión nuevamente.");
+      return;
+    }
+    try {
+      const r = await fetch(BACKEND_URL+"/api/admin/analyze-picks",{
+        method:"POST",
+        headers:{"Authorization":"Bearer "+token}
+      });
+      const data = await r.json().catch(()=>null);
+      if(!r.ok || data?.success===false) throw new Error(data?.error || "Error al analizar picks");
+      const analyzedCount = Number(data?.analyzed ?? data?.analyzedCount ?? data?.total ?? 0);
+      const autoClosedCount = Number(data?.autoClosed ?? 0);
+      const failedCount = Number(data?.failed ?? 0);
+      alert(`Análisis IA completado · Analizados: ${analyzedCount} · Auto-cerrados: ${autoClosedCount} · Fallidos: ${failedCount}`);
+      loadData();
+    } catch (e) {
+      alert(e.message || "Error al analizar picks");
+    }
+  }
 
   async function approveResult(pickId, result) {
     const token = localStorage.getItem("tpz_token");
+    if (!token) {
+      alert("Sesión expirada. Inicia sesión nuevamente.");
+      return;
+    }
     const r = await fetch(BACKEND_URL+"/api/picks/"+pickId+"/result",{method:"PUT",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({result})});
-    if(r.ok){alert("Resultado: "+result.toUpperCase());setPendingPicks(prev=>prev.filter(p=>p._id!==pickId));loadData();}
-    else alert("Error al guardar");
+    const data = await r.json().catch(()=>null);
+    if(r.ok && data?.success!==false){
+      const appliedResult = data?.pick?.result || data?.result || result;
+      alert("Resultado actualizado: "+getHumanResultLabel(appliedResult));
+      setPendingPicks(prev=>prev.filter(p=>p._id!==pickId));
+      loadData();
+    }
+    else alert(data?.error || "Error al guardar resultado");
   }
 
   async function reanalyze(pickId) {
     const token = localStorage.getItem("tpz_token");
+    if (!token) {
+      alert("Sesión expirada. Inicia sesión nuevamente.");
+      return;
+    }
     const r = await fetch(BACKEND_URL+"/api/picks/"+pickId+"/analyze",{method:"POST",headers:{"Authorization":"Bearer "+token}});
-    const data = await r.json();
+    const data = await r.json().catch(()=>null);
     if(r.ok){
       const verdict = data.verification?.preliminaryResult || data.verification?.preliminaryVerdict || data.analysis?.resultado || "SIN RESULTADO";
       const confidenceValue = data.verification?.confidence ?? data.verification?.preliminaryConfidence ?? data.analysis?.confianza;
@@ -2535,7 +2571,7 @@ function AdminPanel({ setView, user, picks }) {
       alert("Dictamen: "+verdict+confidenceLabel);
       loadData();
     }
-    else alert("Error: "+data.error);
+    else alert("Error: "+(data?.error || "No se pudo analizar pick"));
   }
 
   async function resetStats() {
@@ -2922,7 +2958,7 @@ function AdminPanel({ setView, user, picks }) {
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
               <div style={{fontSize:"0.82rem",color:"var(--muted)"}}>{filteredPendingPicks.length} de {pendingPicks.length} picks pendientes</div>
               <div style={{display:"flex",gap:8}}>
-                <button onClick={async()=>{const token=localStorage.getItem("tpz_token");const r=await fetch(BACKEND_URL+"/api/admin/analyze-picks",{method:"POST",headers:{"Authorization":"Bearer "+token}});const data=await r.json().catch(()=>({}));if(!r.ok){alert(data.error||"Error al analizar picks");return;}const analyzedCount=Number(data.analyzedCount ?? data.analyzed ?? data.total ?? 0);alert(analyzedCount>0?`Análisis completado: ${analyzedCount} picks`:"Análisis completado");loadData();}} style={{background:"rgba(29,185,84,0.15)",border:"1px solid var(--g)",color:"var(--g)",padding:"6px 14px",borderRadius:6,cursor:"pointer",fontSize:"0.75rem",fontWeight:700}}>Analizar</button>
+                <button onClick={runAnalyzePendingPicks} style={{background:"rgba(29,185,84,0.15)",border:"1px solid var(--g)",color:"var(--g)",padding:"6px 14px",borderRadius:6,cursor:"pointer",fontSize:"0.75rem",fontWeight:700}}>Analizar</button>
                 <button onClick={resetStats} disabled={resetting} style={{background:"rgba(244,67,54,0.15)",border:"1px solid #f44336",color:"#f44336",padding:"6px 14px",borderRadius:6,cursor:"pointer",fontSize:"0.75rem",fontWeight:700}}>{resetting?"...":"Reset Stats"}</button>
               </div>
             </div>
