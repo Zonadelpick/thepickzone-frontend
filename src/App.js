@@ -634,6 +634,39 @@ function LeagueLogo({ league, size = 24, inline = false }) {
     </span>
   );
 }
+function TeamShield({ logoUrl, teamName, size = 22 }) {
+  const [errored, setErrored] = useState(false);
+  const safeName = String(teamName || "").trim();
+  if (logoUrl && !errored) {
+    return (
+      <img
+        src={logoUrl}
+        alt={safeName || "Equipo"}
+        loading="lazy"
+        onError={()=>setErrored(true)}
+        style={{width:size,height:size,objectFit:"contain",borderRadius:"50%",background:"#fff",padding:1,border:"1px solid rgba(255,255,255,0.14)"}}
+      />
+    );
+  }
+  return (
+    <span style={{width:size,height:size,borderRadius:"50%",display:"inline-flex",alignItems:"center",justifyContent:"center",background:"var(--d4)",border:"1px solid var(--border)",fontSize:"0.62rem",fontWeight:800,color:"var(--text-dim)"}}>
+      {(safeName[0] || "?").toUpperCase()}
+    </span>
+  );
+}
+function resolvePickTeams(pick) {
+  const homeFromBet = String(pick?.bet?.homeTeam || "").trim();
+  const awayFromBet = String(pick?.bet?.awayTeam || "").trim();
+  if (homeFromBet && awayFromBet) return { homeTeam: homeFromBet, awayTeam: awayFromBet };
+  const rawMatch = String(pick?.match || "").trim();
+  if (!rawMatch) return { homeTeam: "", awayTeam: "" };
+  const splitters = [/\s+vs\.?\s+/i, /\s+v\s+/i, /\s+-\s+/];
+  for (const splitter of splitters) {
+    const parts = rawMatch.split(splitter).map((part)=>part.trim()).filter(Boolean);
+    if (parts.length >= 2) return { homeTeam: parts[0], awayTeam: parts[1] };
+  }
+  return { homeTeam: "", awayTeam: "" };
+}
 
 function PickSharePreviewModal({ pick, open, onClose, onDownloadImage }) {
   const [previewDataUrl, setPreviewDataUrl] = useState("");
@@ -892,6 +925,8 @@ function PickCard({ pick, setView, setPurchaseTarget, setSelectedTipster }) {
   const started = isMatchStarted(pick.time);
   const timeDisplay = pick.time && (pick.time.includes('T') || pick.time.includes('Z')) ? isoToLocal(pick.time) : pick.time;
   const salesCount = Math.max(0, toSafeNumber(pick?.salesCount, 0));
+  const teams = resolvePickTeams(pick);
+  const hasTeamNames = teams.homeTeam && teams.awayTeam;
 
   if (started) return null;
 
@@ -907,7 +942,19 @@ function PickCard({ pick, setView, setPurchaseTarget, setSelectedTipster }) {
       </div>
       <div className="tpz-card-content" style={{padding:18}}>
         <div style={{fontSize:"0.72rem",color:"var(--text-dim)",marginBottom:5}}>{timeDisplay}</div>
-        <div style={{fontFamily:"'Barlow Condensed'",fontSize:"1.2rem",fontWeight:700,marginBottom:12}}>{pick.match}</div>
+        <div style={{fontFamily:"'Barlow Condensed'",fontSize:"1.2rem",fontWeight:700,marginBottom:12}}>
+          {hasTeamNames ? (
+            <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+              <TeamShield logoUrl={pick?.homeLogo} teamName={teams.homeTeam} size={22} />
+              <span>{teams.homeTeam}</span>
+              <span style={{color:"var(--muted)",fontSize:"0.9rem"}}>vs</span>
+              <TeamShield logoUrl={pick?.awayLogo} teamName={teams.awayTeam} size={22} />
+              <span>{teams.awayTeam}</span>
+            </div>
+          ) : (
+            <span>{pick.match}</span>
+          )}
+        </div>
         <div style={{background:"var(--d4)",borderRadius:8,padding:"10px",textAlign:"center",border:"1px dashed rgba(29,185,84,0.2)",marginBottom:14}}>
           <span style={{fontSize:"0.65rem",color:"var(--muted)",letterSpacing:1.5,textTransform:"uppercase"}}>🔒 Contenido exclusivo</span>
         </div>
@@ -1884,6 +1931,8 @@ function ProPanelView({ user, addPick, setView, picks }) {
       id: m?.id || `${leagueKey||"odds"}-${m?.home||"home"}-${m?.away||"away"}-${m?.time||idx}`,
       home: m?.home || "Equipo local",
       away: m?.away || "Equipo visitante",
+      homeLogo: m?.homeLogo || "",
+      awayLogo: m?.awayLogo || "",
       timeRaw: m?.time || null,
       time: m?.time ? isoToLocal(m.time) : "Hora por confirmar",
       leagueName,
@@ -2176,6 +2225,8 @@ function ProPanelView({ user, addPick, setView, picks }) {
         flag: match?.flag||league?.flag||"🌍",
         match: match?(match.home+" vs "+match.away):"Partido",
         time: match?.timeRaw||match?.time||"Hoy",
+        homeLogo: match?.homeLogo || "",
+        awayLogo: match?.awayLogo || "",
       };
       const newPick = {...basePayload,...flowPayload,bet:betPayload};
       const r = await fetch(BACKEND_URL+"/api/picks",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify(newPick)});
@@ -2387,7 +2438,13 @@ function ProPanelView({ user, addPick, setView, picks }) {
                 onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--g)";e.currentTarget.style.background="rgba(29,185,84,0.06)";}}
                 onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--border)";e.currentTarget.style.background="var(--d3)";}}>
                 <div>
-                  <div style={{fontWeight:700,fontSize:"1rem",color:"var(--text)",marginBottom:4}}>{m.home} vs {m.away}</div>
+                  <div style={{fontWeight:700,fontSize:"1rem",color:"var(--text)",marginBottom:4,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                    <TeamShield logoUrl={m.homeLogo} teamName={m.home} size={22} />
+                    <span>{m.home}</span>
+                    <span style={{color:"var(--muted)",fontSize:"0.9rem"}}>vs</span>
+                    <TeamShield logoUrl={m.awayLogo} teamName={m.away} size={22} />
+                    <span>{m.away}</span>
+                  </div>
                   <div style={{fontSize:"0.72rem",color:"var(--g)",fontWeight:600}}>{m.leagueName} · {m.time}</div>
                 </div>
                 <span style={{color:"var(--muted)",fontSize:"1.2rem"}}>›</span>
@@ -2411,7 +2468,13 @@ function ProPanelView({ user, addPick, setView, picks }) {
         <div style={{fontSize:"0.68rem",color:"var(--g)",letterSpacing:3,textTransform:"uppercase",fontWeight:700,marginBottom:8}}>Straight · Paso 3 de 3</div>
         <h2 style={{fontFamily:"'Bebas Neue'",fontSize:"2.5rem",marginBottom:24}}>Configura tu pick</h2>
         <div style={{background:"var(--d3)",border:"1px solid var(--g)",borderRadius:12,padding:16,marginBottom:16}}>
-          <div style={{fontWeight:700,fontSize:"1rem"}}>{match?.home} vs {match?.away}</div>
+          <div style={{fontWeight:700,fontSize:"1rem",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+            <TeamShield logoUrl={match?.homeLogo} teamName={match?.home} size={22} />
+            <span>{match?.home}</span>
+            <span style={{color:"var(--muted)",fontSize:"0.9rem"}}>vs</span>
+            <TeamShield logoUrl={match?.awayLogo} teamName={match?.away} size={22} />
+            <span>{match?.away}</span>
+          </div>
           <div style={{fontSize:"0.72rem",color:"var(--g)",marginTop:4}}>{match?.leagueName||league?.name} · {match?.time}</div>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
