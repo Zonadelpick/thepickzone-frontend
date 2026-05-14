@@ -634,13 +634,21 @@ function LeagueLogo({ league, size = 24, inline = false }) {
     </span>
   );
 }
+function normalizeLogoUrl(url) {
+  const raw = String(url || "").trim();
+  if (!raw) return "";
+  if (raw.startsWith("//")) return `https:${raw}`;
+  if (raw.startsWith("http://")) return `https://${raw.slice(7)}`;
+  return raw;
+}
 function TeamShield({ logoUrl, teamName, size = 22 }) {
   const [errored, setErrored] = useState(false);
   const safeName = String(teamName || "").trim();
-  if (logoUrl && !errored) {
+  const safeLogoUrl = normalizeLogoUrl(logoUrl);
+  if (safeLogoUrl && !errored) {
     return (
       <img
-        src={logoUrl}
+        src={safeLogoUrl}
         alt={safeName || "Equipo"}
         loading="lazy"
         onError={()=>setErrored(true)}
@@ -938,7 +946,10 @@ function PickCard({ pick, setView, setPurchaseTarget, setSelectedTipster }) {
         <span style={{background:"rgba(29,185,84,0.1)",border:"1px solid rgba(29,185,84,0.2)",color:"var(--g)",padding:"3px 10px",borderRadius:100,fontSize:"0.67rem",fontWeight:700}}>
           {pick.sport} {pick.league}
         </span>
-        <span style={{color:"var(--gold)",fontWeight:700}}>{pick.odds}</span>
+        <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:2}}>
+          <span style={{color:"var(--gold)",fontWeight:900,fontSize:"0.78rem"}}>MOMIO {pick.odds}</span>
+          <span style={{color:"var(--text-dim)",fontWeight:700,fontSize:"0.66rem"}}>BANK {pick.bank}% recomendado</span>
+        </div>
       </div>
       <div className="tpz-card-content" style={{padding:18}}>
         <div style={{fontSize:"0.72rem",color:"var(--text-dim)",marginBottom:5}}>{timeDisplay}</div>
