@@ -319,6 +319,8 @@ async function createPickSharePreviewImage(pick) {
   const oddsText = formatOddsValue(pick?.odds);
   const bankValue = Math.max(0, Math.round(toSafeNumber(pick?.bank, 0)));
   const bankText = `${bankValue}%`;
+  const priceValue = toSafeNumber(pick?.price, 0);
+  const priceText = priceValue <= 0 ? "GRATIS" : `$${priceValue.toFixed(2)} USD`;
   const timeText = sanitizeShareText(getPickShareTime(pick), "Hora por confirmar", 48);
 
   const bgGradient = ctx.createLinearGradient(0, 0, width, height);
@@ -358,7 +360,7 @@ async function createPickSharePreviewImage(pick) {
   ctx.fillText("THE PICK ZONE", 98, 140);
   ctx.fillStyle = "rgba(255,255,255,0.82)";
   ctx.font = "700 24px DM Sans, sans-serif";
-  ctx.fillText("VISTA PREVIA OFICIAL", 98, 176);
+  ctx.fillText("VISTA PREVIA (NO INCLUYE PICK)", 98, 176);
 
   ctx.fillStyle = "rgba(29,185,84,0.14)";
   ctx.fillRect(98, 226, 220, 52);
@@ -381,7 +383,7 @@ async function createPickSharePreviewImage(pick) {
   ctx.fillStyle = "rgba(255,255,255,0.78)";
   ctx.font = "700 30px DM Sans, sans-serif";
   ctx.fillText(`${pick?.sport || "🏅"} ${leagueText}`, 98, currentY + 34);
-  ctx.fillText(`Tipster: ${tipsterText}`, 98, currentY + 84);
+  ctx.fillText("Información previa del evento", 98, currentY + 84);
   ctx.fillText(timeText, 98, currentY + 134);
 
   const drawMetricCard = (label, value, x, y, w, h) => {
@@ -400,18 +402,19 @@ async function createPickSharePreviewImage(pick) {
 
   drawMetricCard("MOMIO", oddsText, 98, 760, 420, 190);
   drawMetricCard("BANK", bankText, 562, 760, 420, 190);
+  drawMetricCard("COSTO", priceText, 98, 972, 884, 170);
 
   ctx.fillStyle = "rgba(7,17,13,0.85)";
-  ctx.fillRect(98, 992, width - 196, 148);
+  ctx.fillRect(98, 1162, width - 196, 108);
   ctx.strokeStyle = "rgba(245,197,66,0.44)";
   ctx.lineWidth = 2;
-  ctx.strokeRect(98, 992, width - 196, 148);
+  ctx.strokeRect(98, 1162, width - 196, 108);
   ctx.fillStyle = "#F5C542";
   ctx.font = "800 24px DM Sans, sans-serif";
-  ctx.fillText("CONTENIDO PREMIUM TPZ", 124, 1040);
+  ctx.fillText("PREVENTA / CONTENIDO BLOQUEADO", 124, 1202);
   ctx.fillStyle = "rgba(255,255,255,0.8)";
-  ctx.font = "700 24px DM Sans, sans-serif";
-  ctx.fillText("Este arte contiene marca de agua y uso autorizado.", 124, 1086);
+  ctx.font = "700 21px DM Sans, sans-serif";
+  ctx.fillText("La selección del pick se desbloquea solo tras compra autorizada.", 124, 1238);
 
   ctx.fillStyle = "rgba(255,255,255,0.54)";
   ctx.font = "700 20px DM Sans, sans-serif";
@@ -888,7 +891,7 @@ function HomeView({ setView, setPurchaseTarget, picks, setSelectedTipster }) {
 function PickCard({ pick, setView, setPurchaseTarget, setSelectedTipster }) {
   const started = isMatchStarted(pick.time);
   const timeDisplay = pick.time && (pick.time.includes('T') || pick.time.includes('Z')) ? isoToLocal(pick.time) : pick.time;
-  const downloadCount = Math.max(0, toSafeNumber(pick?.downloadCount, 0));
+  const salesCount = Math.max(0, toSafeNumber(pick?.salesCount, 0));
 
   if (started) return null;
 
@@ -909,7 +912,7 @@ function PickCard({ pick, setView, setPurchaseTarget, setSelectedTipster }) {
           <span style={{fontSize:"0.65rem",color:"var(--muted)",letterSpacing:1.5,textTransform:"uppercase"}}>🔒 Contenido exclusivo</span>
         </div>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap",marginBottom:12}}>
-          <span style={{fontSize:"0.68rem",color:"var(--muted)"}}>⬇️ {downloadCount} descargas</span>
+          <span style={{fontSize:"0.68rem",color:"var(--muted)"}}>💰 {salesCount} ventas</span>
           <PickShareButtons pick={pick} compact />
         </div>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
@@ -1331,21 +1334,28 @@ function RankingsView({ setView, picks, setSelectedTipster }) {
 }
 
 // ── AUTH VIEW ─────────────────────────────────────────────────────────────────
-function AuthView({ setView, setUser, mode }) {
+function AuthView({ setView, setUser, mode, authSystemMessage }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit() {
     setLoading(true); setError("");
+    setNotice("");
     try {
       const endpoint = mode==="login" ? "/api/auth/login" : "/api/auth/register";
       const body = mode==="login" ? {email,password} : {name,email,password};
       const r = await fetch(BACKEND_URL+endpoint, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
       const data = await r.json();
       if (!r.ok) { setError(data.error||"Error"); setLoading(false); return; }
+      if (mode === "register") {
+        setNotice(data?.message || "Registro exitoso. Revisa tu correo para activar tu cuenta.");
+        setLoading(false);
+        return;
+      }
       localStorage.setItem("tpz_token", data.token);
       setUser(data.user);
       setView("home");
@@ -1361,10 +1371,12 @@ function AuthView({ setView, setUser, mode }) {
           <h2 style={{fontFamily:"'Bebas Neue'",fontSize:"2rem",marginBottom:24,textAlign:"center"}}>
             {mode==="login"?"Iniciar Sesión":"Crear Cuenta"}
           </h2>
+          {authSystemMessage && mode==="login" && <div style={{background:"rgba(29,185,84,0.1)",border:"1px solid rgba(29,185,84,0.35)",color:"var(--g)",padding:"8px 10px",borderRadius:8,fontSize:"0.8rem",marginBottom:12}}>{authSystemMessage}</div>}
           {mode==="register" && <input value={name} onChange={e=>setName(e.target.value)} placeholder="Nombre completo" style={iStyle}/>}
           <input value={email} onChange={e=>setEmail(e.target.value)} placeholder="Email" type="email" style={iStyle}/>
           <input value={password} onChange={e=>setPassword(e.target.value)} placeholder="Contraseña" type="password" style={iStyle}/>
           {error && <div style={{color:"#f44336",fontSize:"0.82rem",marginBottom:12}}>{error}</div>}
+          {notice && <div style={{color:"var(--g)",fontSize:"0.8rem",marginBottom:12}}>{notice}</div>}
           <button onClick={handleSubmit} disabled={loading} style={{width:"100%",background:"var(--g)",color:"#000",border:"none",padding:"13px",borderRadius:8,fontFamily:"'Barlow Condensed'",fontSize:"1rem",fontWeight:900,letterSpacing:2,cursor:"pointer",marginBottom:16}}>
             {loading?"...":mode==="login"?"ENTRAR":"CREAR CUENTA"}
           </button>
@@ -1394,7 +1406,10 @@ function ProfileView({ setView, user, setUser, setSelectedTipster }) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
-  const canConfigurePayout = ["pro","tipster","admin"].includes(String(user?.role || "").toLowerCase());
+  const [saveWarning, setSaveWarning] = useState("");
+  const [connectSyncing, setConnectSyncing] = useState(false);
+  const [connectRedirecting, setConnectRedirecting] = useState(false);
+  const canConfigurePayout = Boolean(user?._id || user?.id);
 
   useEffect(()=>{
     if (editMode) return;
@@ -1413,6 +1428,70 @@ function ProfileView({ setView, user, setUser, setSelectedTipster }) {
     if (typeof setSelectedTipster === "function") setSelectedTipster(tipsterName);
     setView("tipster-profile");
   }
+
+  function payoutStatusMeta(statusValue, payoutReady) {
+    if (payoutReady) return { label: "LISTO PARA PAGO", color: "var(--g)", bg: "rgba(29,185,84,0.15)" };
+    const normalized = String(statusValue || "").toLowerCase();
+    if (normalized === "onboarding_required") return { label: "ONBOARDING REQUERIDO", color: "var(--gold)", bg: "rgba(245,197,66,0.15)" };
+    if (normalized === "pending_verification") return { label: "VERIFICACIÓN PENDIENTE", color: "var(--gold)", bg: "rgba(245,197,66,0.15)" };
+    if (normalized === "connect_not_enabled") return { label: "CONNECT NO HABILITADO", color: "#f59e0b", bg: "rgba(245,158,11,0.15)" };
+    if (normalized === "stripe_setup_pending") return { label: "CONFIGURACIÓN PENDIENTE", color: "var(--gold)", bg: "rgba(245,197,66,0.15)" };
+    return { label: "PENDIENTE CONFIGURACIÓN", color: "var(--gold)", bg: "rgba(245,197,66,0.15)" };
+  }
+
+  async function syncConnectStatus(showErrors = false) {
+    if (!canConfigurePayout) return;
+    const token = localStorage.getItem("tpz_token");
+    if (!token) return;
+    setConnectSyncing(true);
+    try {
+      const r = await fetch(BACKEND_URL+"/api/stripe/connect/status",{
+        headers:{"Authorization":"Bearer "+token}
+      });
+      const data = await r.json().catch(()=>null);
+      if(!r.ok) throw new Error(data?.error || "No se pudo consultar Stripe Connect");
+      setUser(prev=>({...(prev||{}),...(data||{})}));
+      if (showErrors) setError("");
+    } catch(e) {
+      if (showErrors) setError(e.message || "Error consultando Stripe Connect");
+    }
+    setConnectSyncing(false);
+  }
+
+  async function handleOpenConnectOnboarding(mode = "onboarding") {
+    if (!canConfigurePayout) return;
+    const token = localStorage.getItem("tpz_token");
+    if (!token) {
+      setError("Tu sesión expiró, vuelve a iniciar sesión");
+      return;
+    }
+    setConnectRedirecting(true);
+    setError("");
+    try {
+      const base = `${window.location.origin}${window.location.pathname}`;
+      const r = await fetch(BACKEND_URL+"/api/stripe/connect/create-onboarding-link",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},
+        body:JSON.stringify({
+          mode,
+          refreshUrl: `${base}?stripe=connect-refresh`,
+          returnUrl: `${base}?stripe=connect-return`
+        })
+      });
+      const data = await r.json().catch(()=>null);
+      if(!r.ok || !data?.onboardingUrl) throw new Error(data?.error || "No se pudo crear enlace de onboarding");
+      window.location.href = data.onboardingUrl;
+      return;
+    } catch(e) {
+      setError(e.message || "Error iniciando onboarding");
+    }
+    setConnectRedirecting(false);
+  }
+
+  useEffect(()=>{
+    if (!canConfigurePayout) return;
+    syncConnectStatus(false);
+  },[user?._id]);
 
   async function handleSave() {
     const cleanName = String(name||"").trim();
@@ -1434,6 +1513,7 @@ function ProfileView({ setView, user, setUser, setSelectedTipster }) {
     setSaving(true);
     setSaved(false);
     setError("");
+    setSaveWarning("");
     try {
       const token = localStorage.getItem("tpz_token");
       if (!token) throw new Error("Tu sesión expiró, vuelve a iniciar sesión");
@@ -1463,6 +1543,7 @@ function ProfileView({ setView, user, setUser, setSelectedTipster }) {
       setBankAccountHolder(data?.bankAccountHolder||"");
       setBankName(data?.bankName||"");
       setClabe("");
+      setSaveWarning(data?.setupWarning || "");
       setSaved(true);
       setEditMode(false);
       setTimeout(()=>setSaved(false),2000);
@@ -1510,6 +1591,16 @@ function ProfileView({ setView, user, setUser, setSelectedTipster }) {
                       <div style={{fontSize:"0.66rem",color:"var(--muted)",marginTop:6}}>
                         CLABE actual: {user?.bankClabeMasked || "No configurada"} · deja CLABE vacía si no deseas cambiarla.
                       </div>
+                      {!user?.stripePayoutReady && (
+                        <button
+                          type="button"
+                          onClick={()=>handleOpenConnectOnboarding(user?.stripeConnectedAccountId ? "update" : "onboarding")}
+                          disabled={connectRedirecting}
+                          style={{marginTop:8,width:"100%",background:"none",border:"1px solid var(--g)",color:"var(--g)",padding:"7px 10px",borderRadius:6,cursor:connectRedirecting?"not-allowed":"pointer",fontSize:"0.72rem",fontWeight:700}}
+                        >
+                          {connectRedirecting ? "Abriendo Stripe..." : (user?.stripeConnectedAccountId ? "Completar verificación en Stripe Connect" : "Configurar Stripe Connect")}
+                        </button>
+                      )}
                     </div>
                   )}
                 </>
@@ -1528,16 +1619,27 @@ function ProfileView({ setView, user, setUser, setSelectedTipster }) {
             <div style={{marginTop:14,background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:"12px 14px"}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:8}}>
                 <div style={{fontSize:"0.68rem",color:"var(--g)",letterSpacing:1.2}}>PAGOS SEMANALES</div>
-                <span style={{fontSize:"0.65rem",fontWeight:700,padding:"3px 10px",borderRadius:100,background:user?.stripePayoutReady?"rgba(29,185,84,0.15)":"rgba(245,197,66,0.15)",color:user?.stripePayoutReady?"var(--g)":"var(--gold)"}}>
-                  {user?.stripePayoutReady ? "LISTO PARA PAGO" : "PENDIENTE CONFIGURACIÓN"}
+                <span style={{fontSize:"0.65rem",fontWeight:700,padding:"3px 10px",borderRadius:100,background:payoutStatusMeta(user?.stripePayoutStatus,user?.stripePayoutReady).bg,color:payoutStatusMeta(user?.stripePayoutStatus,user?.stripePayoutReady).color}}>
+                  {payoutStatusMeta(user?.stripePayoutStatus,user?.stripePayoutReady).label}
                 </span>
               </div>
               <div style={{fontSize:"0.74rem",color:"var(--text-dim)"}}>CLABE: {user?.bankClabeMasked || "No configurada"}</div>
               <div style={{fontSize:"0.74rem",color:"var(--text-dim)"}}>Titular: {user?.bankAccountHolder || "No configurado"}</div>
               <div style={{fontSize:"0.74rem",color:"var(--text-dim)"}}>Banco: {user?.bankName || "No configurado"}</div>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:10}}>
+                <button onClick={()=>syncConnectStatus(true)} disabled={connectSyncing} style={{background:"none",border:"1px solid var(--border)",color:"var(--text)",padding:"6px 10px",borderRadius:6,cursor:connectSyncing?"not-allowed":"pointer",fontSize:"0.68rem",fontWeight:700}}>
+                  {connectSyncing ? "Consultando..." : "Actualizar estado Connect"}
+                </button>
+                {!user?.stripePayoutReady && (
+                  <button onClick={()=>handleOpenConnectOnboarding(user?.stripeConnectedAccountId ? "update" : "onboarding")} disabled={connectRedirecting} style={{background:"none",border:"1px solid var(--g)",color:"var(--g)",padding:"6px 10px",borderRadius:6,cursor:connectRedirecting?"not-allowed":"pointer",fontSize:"0.68rem",fontWeight:700}}>
+                    {connectRedirecting ? "Abriendo Stripe..." : (user?.stripeConnectedAccountId ? "Completar onboarding" : "Configurar Stripe")}
+                  </button>
+                )}
+              </div>
             </div>
           )}
           {error && <div style={{marginTop:12,background:"rgba(244,67,54,0.1)",border:"1px solid #f44336",color:"#f44336",padding:"8px 10px",borderRadius:8,fontSize:"0.8rem"}}>{error}</div>}
+          {saveWarning && <div style={{marginTop:12,background:"rgba(245,197,66,0.12)",border:"1px solid rgba(245,197,66,0.45)",color:"var(--gold)",padding:"8px 10px",borderRadius:8,fontSize:"0.8rem"}}>{saveWarning}</div>}
           {editMode&&(
             <button disabled={saving} onClick={handleSave} style={{marginTop:16,width:"100%",background:saving?"var(--d4)":"var(--g)",color:saving?"var(--muted)":"#000",border:"none",padding:"12px",borderRadius:8,fontFamily:"'Barlow Condensed'",fontSize:"1rem",fontWeight:900,letterSpacing:2,cursor:"pointer"}}>
               {saving?"Guardando...":"GUARDAR CAMBIOS"}
@@ -2641,7 +2743,7 @@ function AdminPanel({ setView, user, picks }) {
 
   async function approveWeeklyPayout(payoutRow) {
     if (!payoutRow?._id) return;
-    if (!window.confirm(`¿Aprobar pago para ${payoutRow.tipsterName || "tipster"} por ${formatMoney(payoutRow.payoutAmount)}?`)) return;
+    if (!window.confirm(`¿Aprobar y enviar pago para ${payoutRow.tipsterName || "tipster"} por ${formatMoney(payoutRow.payoutAmount)}?`)) return;
     const token = localStorage.getItem("tpz_token");
     if (!token) {
       setPayoutError("Sesión expirada. Inicia sesión nuevamente.");
@@ -3338,7 +3440,7 @@ function AdminPanel({ setView, user, picks }) {
             )}
             {!payoutLoading && Array.isArray(payoutSummary?.payouts) && payoutSummary.payouts.map((row)=>{
               const chip = getPayoutStatusChip(row.status);
-              const canApprove = ["pending","failed"].includes(String(row.status || "").toLowerCase()) && row.stripePayoutReady && Number(row.payoutAmount||0) > 0;
+              const canApprove = ["pending","failed"].includes(String(row.status || "").toLowerCase()) && Number(row.payoutAmount||0) > 0;
               const approving = approvingPayoutId === row._id;
               return (
                 <div key={row._id} style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:14,marginBottom:10}}>
@@ -3347,6 +3449,7 @@ function AdminPanel({ setView, user, picks }) {
                       <div style={{fontWeight:700,fontSize:"0.9rem"}}>{row.tipsterName || "Tipster"}</div>
                       <div style={{fontSize:"0.72rem",color:"var(--muted)"}}>{row.tipsterEmail || "Sin email"}</div>
                       <div style={{fontSize:"0.7rem",color:"var(--text-dim)",marginTop:3}}>CLABE: {row.bankClabeMasked || "No configurada"} · Titular: {row.bankAccountHolder || "No configurado"}</div>
+                      <div style={{fontSize:"0.68rem",color:"var(--muted)",marginTop:2}}>Destino: Stripe Connect → cuenta bancaria (CLABE terminación {row.bankClabeLast4 || "----"})</div>
                     </div>
                     <div style={{textAlign:"right"}}>
                       <span style={{...chip.style,padding:"3px 10px",borderRadius:100,fontSize:"0.66rem",fontWeight:700}}>{chip.label}</span>
@@ -3357,7 +3460,7 @@ function AdminPanel({ setView, user, picks }) {
                   {row.errorMessage && <div style={{marginTop:8,fontSize:"0.72rem",color:"#f44336"}}>Error Stripe: {row.errorMessage}</div>}
                   <div style={{display:"flex",justifyContent:"flex-end",marginTop:10}}>
                     <button disabled={!canApprove || approving} onClick={()=>approveWeeklyPayout(row)} style={{background:canApprove?"var(--g)":"var(--d3)",border:canApprove?"none":"1px solid var(--border)",color:canApprove?"#000":"var(--muted)",padding:"7px 14px",borderRadius:8,cursor:canApprove && !approving?"pointer":"not-allowed",fontSize:"0.75rem",fontWeight:900,letterSpacing:1}}>
-                      {approving ? "Procesando..." : canApprove ? "APROBAR PAGO" : (row.stripePayoutReady ? "NO DISPONIBLE" : "SIN CONFIG STRIPE")}
+                      {approving ? "Procesando..." : canApprove ? "APROBAR Y ENVIAR" : "NO DISPONIBLE"}
                     </button>
                   </div>
                 </div>
@@ -3458,7 +3561,7 @@ function RevenueDashboard({ setView }) {
 
   async function approvePayout(payoutRow) {
     if (!payoutRow?._id) return;
-    if (!window.confirm(`¿Aprobar pago para ${payoutRow.tipsterName || "tipster"} por ${formatMoney(payoutRow.payoutAmount)}?`)) return;
+    if (!window.confirm(`¿Aprobar y enviar pago para ${payoutRow.tipsterName || "tipster"} por ${formatMoney(payoutRow.payoutAmount)}?`)) return;
     const token = localStorage.getItem("tpz_token");
     if (!token) {
       setError("Sesión expirada. Inicia sesión nuevamente.");
@@ -3509,7 +3612,7 @@ function RevenueDashboard({ setView }) {
 
         <div style={{background:"rgba(245,197,66,0.08)",border:"1px solid rgba(245,197,66,0.2)",borderRadius:10,padding:"14px 16px",marginBottom:16}}>
           <div style={{fontSize:"0.72rem",color:"var(--gold)",fontWeight:700,marginBottom:4}}>CORTE: {weekLabel}</div>
-          <div style={{fontSize:"0.78rem",color:"var(--muted)"}}>Aprueba pagos para transferir automáticamente al tipster Pro en Stripe Connect.</div>
+          <div style={{fontSize:"0.78rem",color:"var(--muted)"}}>Un clic por usuario: aprobar y enviar desde balance Stripe a la CLABE vinculada en Connect.</div>
         </div>
 
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:12,marginBottom:20}}>
@@ -3528,7 +3631,7 @@ function RevenueDashboard({ setView }) {
           {payouts.length===0 && <div style={{textAlign:"center",color:"var(--muted)",padding:24}}>Sin payouts para esta semana.</div>}
           {payouts.map((row)=>{
             const chip = payoutStatusChip(row.status);
-            const canApprove = ["pending","failed"].includes(String(row.status || "").toLowerCase()) && row.stripePayoutReady && Number(row.payoutAmount||0) > 0;
+            const canApprove = ["pending","failed"].includes(String(row.status || "").toLowerCase()) && Number(row.payoutAmount||0) > 0;
             const approving = approvingId === row._id;
             return (
               <div key={row._id} style={{border:"1px solid var(--border)",borderRadius:10,padding:"12px 14px",marginBottom:10,background:"var(--d4)"}}>
@@ -3537,6 +3640,7 @@ function RevenueDashboard({ setView }) {
                     <div style={{fontWeight:700,fontSize:"0.9rem"}}>{row.tipsterName || "Tipster"}</div>
                     <div style={{fontSize:"0.72rem",color:"var(--muted)"}}>{row.tipsterEmail || "Sin email"}</div>
                     <div style={{fontSize:"0.7rem",color:"var(--text-dim)",marginTop:3}}>CLABE: {row.bankClabeMasked || "No configurada"} · Titular: {row.bankAccountHolder || "No configurado"}</div>
+                    <div style={{fontSize:"0.68rem",color:"var(--muted)",marginTop:2}}>Destino: Stripe Connect → cuenta bancaria (CLABE terminación {row.bankClabeLast4 || "----"})</div>
                   </div>
                   <div style={{textAlign:"right"}}>
                     <span style={{...chip.style,padding:"3px 10px",borderRadius:100,fontSize:"0.66rem",fontWeight:700}}>{chip.label}</span>
@@ -3547,7 +3651,7 @@ function RevenueDashboard({ setView }) {
                 {row.errorMessage && <div style={{marginTop:8,fontSize:"0.72rem",color:"#f44336"}}>Error Stripe: {row.errorMessage}</div>}
                 <div style={{display:"flex",justifyContent:"flex-end",marginTop:10}}>
                   <button disabled={!canApprove || approving} onClick={()=>approvePayout(row)} style={{background:canApprove?"var(--g)":"var(--d3)",border:canApprove?"none":"1px solid var(--border)",color:canApprove?"#000":"var(--muted)",padding:"7px 14px",borderRadius:8,cursor:canApprove && !approving?"pointer":"not-allowed",fontSize:"0.75rem",fontWeight:900,letterSpacing:1}}>
-                    {approving ? "Procesando..." : canApprove ? "APROBAR PAGO" : (row.stripePayoutReady ? "NO DISPONIBLE" : "SIN CONFIG STRIPE")}
+                    {approving ? "Procesando..." : canApprove ? "APROBAR Y ENVIAR" : "NO DISPONIBLE"}
                   </button>
                 </div>
               </div>
@@ -3659,6 +3763,7 @@ export default function App() {
   const [purchaseTarget, setPurchaseTarget] = useState(null);
   const [selectedTipster, setSelectedTipster] = useState(null);
   const [notifications, setNotifications] = useState([]);
+  const [authSystemMessage, setAuthSystemMessage] = useState("");
 
   // Restore session
   useEffect(()=>{
@@ -3678,6 +3783,28 @@ export default function App() {
     }
     if (flow === "pro") {
       setView("become-pro");
+      return;
+    }
+    if (flow === "verify-email") {
+      const token = params.get("token");
+      if (!token) {
+        setAuthSystemMessage("Token de verificación no encontrado.");
+        setView("login");
+        clearCheckoutQueryParams();
+        return;
+      }
+      fetch(BACKEND_URL+`/api/auth/verify-email?token=${encodeURIComponent(token)}`)
+        .then(async (r)=>({ ok: r.ok, data: await r.json() }))
+        .then(({ ok, data })=>{
+          setAuthSystemMessage(ok ? (data?.message || "Correo verificado. Ya puedes iniciar sesión.") : (data?.error || "No se pudo verificar el correo."));
+          setView("login");
+          clearCheckoutQueryParams();
+        })
+        .catch(()=>{
+          setAuthSystemMessage("No se pudo verificar el correo.");
+          setView("login");
+          clearCheckoutQueryParams();
+        });
     }
   },[]);
 
@@ -3776,8 +3903,8 @@ export default function App() {
       {view==="marketplace"      && <MarketplaceView setView={gotoView} setPurchaseTarget={setPurchaseTarget} picks={picks} setSelectedTipster={setSelectedTipster}/>}
       {view==="purchase"         && <PurchaseView    key={`${user?._id||'anon'}-${purchaseTarget?._id||'none'}`} pick={purchaseTarget} setView={gotoView} user={user}/>}
       {view==="rankings"         && <RankingsView    setView={gotoView} picks={picks} setSelectedTipster={setSelectedTipster}/>}
-      {view==="login"            && <AuthView        setView={gotoView} setUser={setUser} mode="login"/>}
-      {view==="register"         && <AuthView        setView={gotoView} setUser={setUser} mode="register"/>}
+      {view==="login"            && <AuthView        setView={gotoView} setUser={setUser} mode="login" authSystemMessage={authSystemMessage}/>}
+      {view==="register"         && <AuthView        setView={gotoView} setUser={setUser} mode="register" authSystemMessage={authSystemMessage}/>}
       {view==="profile"          && <ProfileView     setView={gotoView} user={user} setUser={setUser} setSelectedTipster={setSelectedTipster}/>}
       {view==="become-pro"       && <BecomeProView   setView={gotoView} user={user} setUser={setUser}/>}
       {view==="pro-panel"        && <ProPanelView    user={user} addPick={addPick} setView={gotoView} picks={picks}/>}
