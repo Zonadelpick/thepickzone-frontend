@@ -2710,6 +2710,28 @@ function AdminPanel({ setView, user, picks }) {
     await fetch(BACKEND_URL+"/api/admin/reset-stats",{method:"POST",headers:{"Authorization":"Bearer "+token}});
     setResetting(false); alert("Stats reseteados"); loadData();
   }
+  async function removeUserFromPlatform(targetUser) {
+    const targetUserId = String(targetUser?._id || "");
+    if (!targetUserId) return;
+    if (String(user?._id || "") === targetUserId) {
+      alert("No puedes eliminar tu propio usuario admin.");
+      return;
+    }
+    if (!window.confirm(`¿Eliminar definitivamente a ${targetUser?.name || "este usuario"}?\n\nEsta acción borra su cuenta y datos relacionados.`)) return;
+    try {
+      const token = localStorage.getItem("tpz_token");
+      const r = await fetch(BACKEND_URL+`/api/admin/users/${targetUserId}`,{
+        method:"DELETE",
+        headers:{"Authorization":"Bearer "+token}
+      });
+      const data = await r.json().catch(()=>null);
+      if(!r.ok || !data?.success) throw new Error(data?.error || "No se pudo eliminar usuario");
+      alert(`${targetUser?.name || "Usuario"} eliminado correctamente.`);
+      loadData();
+    } catch (e) {
+      alert(e.message || "Error al eliminar usuario");
+    }
+  }
 
   async function loadWeeklyPayouts(targetWeekOffset = payoutWeekOffset, showLoader = false) {
     const token = localStorage.getItem("tpz_token");
@@ -3505,6 +3527,11 @@ function AdminPanel({ setView, user, picks }) {
                       else alert("Error al cambiar rol");
                     }} style={{fontSize:"0.65rem",fontWeight:700,padding:"3px 10px",borderRadius:100,background:"rgba(244,67,54,0.1)",border:"1px solid #f44336",color:"#f44336",cursor:"pointer"}}>
                       Quitar Pro
+                    </button>
+                  )}
+                  {u.email!=="admin@thepickzone.com" && String(user?._id||"")!==String(u._id||"") && (
+                    <button onClick={()=>removeUserFromPlatform(u)} style={{fontSize:"0.65rem",fontWeight:700,padding:"3px 10px",borderRadius:100,background:"rgba(244,67,54,0.1)",border:"1px solid #f44336",color:"#f44336",cursor:"pointer"}}>
+                      Eliminar usuario
                     </button>
                   )}
                 </div>
