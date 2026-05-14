@@ -154,6 +154,20 @@ function formatOddsValue(value) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed.toFixed(2) : "--";
 }
 
+function formatSignedPercent(value, fallback = "+0.0%") {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  const fixed = parsed.toFixed(1);
+  return parsed >= 0 ? `+${fixed}%` : `${fixed}%`;
+}
+
+function formatSignedUnits(value, fallback = "+0.00u") {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  const fixed = parsed.toFixed(2);
+  return parsed >= 0 ? `+${fixed}u` : `${fixed}u`;
+}
+
 const CLABE_WEIGHTS = [3, 7, 1];
 function normalizeDigits(value) {
   return String(value || "").replace(/\D+/g, "");
@@ -1215,7 +1229,7 @@ function PurchaseView({ pick, setView, user }) {
 }
 
 // ── RANKINGS ──────────────────────────────────────────────────────────────────
-function RankingsView({ setView, picks }) {
+function RankingsView({ setView, picks, setSelectedTipster }) {
   const [tipsters, setTipsters] = useState([]);
   const [sortBy, setSortBy] = useState("roi");
 
@@ -1242,14 +1256,25 @@ function RankingsView({ setView, picks }) {
             const decisive = won + lost;
             const winRate = Math.max(0, toSafeNumber(u.winRate, decisive>0 ? Math.round((won/decisive)*100) : 0));
             const avgOdds = toSafeNumber(u.avgOdds, localAvgOdds);
-            const roiNum = parseFloat((u.roi||"0").replace("+","").replace("%",""))||0;
+            const roiNum = toSafeNumber(u.roiValue, parseFloat((u.roi||"0").replace("+","").replace("%",""))||0);
+            const yieldNum = toSafeNumber(u.yieldValue, parseFloat((u.yield||"0").replace("+","").replace("%",""))||0);
+            const netUnits = toSafeNumber(u.netUnits, 0);
+            const roiText = typeof u.roi === "string" && u.roi ? u.roi : formatSignedPercent(roiNum);
+            const yieldText = typeof u.yield === "string" && u.yield ? u.yield : formatSignedPercent(yieldNum);
 
-            return {...u, picks:totalPicks, won, lost, push, winRate, avgOdds, roiNum};
+            return {...u, picks:totalPicks, won, lost, push, winRate, avgOdds, roiNum, yieldNum, roiText, yieldText, netUnits};
           });
           setTipsters(t);
         }
       }).catch(()=>{});
   },[picks]);
+
+  function openTipsterProfile(tipster) {
+    const tipsterName = String(tipster?.name || "").trim();
+    if (!tipsterName) return;
+    if (typeof setSelectedTipster === "function") setSelectedTipster(tipsterName);
+    setView("tipster-profile");
+  }
 
   const sorted = [...tipsters].sort((a,b)=>{
     if(sortBy==="roi") return b.roiNum - a.roiNum;
@@ -1283,18 +1308,20 @@ function RankingsView({ setView, picks }) {
           <div className="tpz-ranking-row" key={t._id||i} style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:12,padding:"20px",marginBottom:12,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
             <div style={{display:"flex",alignItems:"center",gap:16}}>
               <div style={{fontFamily:"'Bebas Neue'",fontSize:"1.8rem",color:"var(--gold)",width:32}}>{i+1}</div>
-              <div style={{width:44,height:44,borderRadius:"50%",background:"var(--g)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Bebas Neue'",color:"#000",fontSize:"1.2rem",overflow:"hidden",flexShrink:0}}>
+              <button onClick={()=>openTipsterProfile(t)} style={{width:44,height:44,borderRadius:"50%",background:"var(--g)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Bebas Neue'",color:"#000",fontSize:"1.2rem",overflow:"hidden",flexShrink:0,padding:0,border:"none",cursor:"pointer"}}>
                 {t.avatar ? <img src={t.avatar} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/> : (t.name||"T")[0].toUpperCase()}
-              </div>
+              </button>
               <div>
-                <div style={{fontWeight:700,fontSize:"1rem"}}>{t.name}</div>
+                <button onClick={()=>openTipsterProfile(t)} style={{fontWeight:700,fontSize:"1rem",background:"none",border:"none",padding:0,color:"var(--text)",cursor:"pointer"}}>{t.name}</button>
                 <div style={{fontSize:"0.72rem",color:"var(--muted)"}}>{t.picks} picks · W/L/P {t.won}/{t.lost}/{t.push}</div>
                 <div style={{fontSize:"0.68rem",color:"var(--text-dim)",marginTop:2}}>Win Rate {t.winRate}% · Momio prom {formatOddsValue(t.avgOdds)}</div>
               </div>
             </div>
             <div style={{textAlign:"right"}}>
-              <div style={{fontFamily:"'Bebas Neue'",fontSize:"1.8rem",color:"var(--g)"}}>{t.roi||"+0%"}</div>
-              <div style={{fontSize:"0.65rem",color:"var(--muted)",letterSpacing:1}}>ROI</div>
+              <div style={{fontFamily:"'Bebas Neue'",fontSize:"1.55rem",color:t.roiNum>=0?"var(--g)":"#f44336"}}>{t.roiText||"+0%"}</div>
+              <div style={{fontSize:"0.62rem",color:"var(--muted)",letterSpacing:1}}>ROI</div>
+              <div style={{fontSize:"0.8rem",color:t.yieldNum>=0?"var(--g)":"#f44336",fontWeight:700,marginTop:2}}>YIELD {t.yieldText||"+0%"}</div>
+              <div style={{fontSize:"0.68rem",color:t.netUnits>=0?"var(--g)":"#f44336"}}>{formatSignedUnits(t.netUnits)}</div>
             </div>
           </div>
         ))}
@@ -3564,6 +3591,12 @@ function TipsterProfileView({ setView, tipsterName, picks }) {
   const winRate = Math.max(0, toSafeNumber(tipster?.winRate, decisive>0 ? Math.round((won/decisive)*100) : 0));
   const avgOdds = toSafeNumber(tipster?.avgOdds, localAvgOdds);
   const totalPicks = Math.max(0, toSafeNumber(tipster?.totalPicks, (won+lost+push)||myPicks.length));
+  const roiValue = toSafeNumber(tipster?.roiValue, parseFloat(String(tipster?.roi || "0").replace("+","").replace("%","")) || 0);
+  const yieldValue = toSafeNumber(tipster?.yieldValue, parseFloat(String(tipster?.yield || "0").replace("+","").replace("%","")) || 0);
+  const netUnits = toSafeNumber(tipster?.netUnits, roiValue);
+  const roiText = typeof tipster?.roi === "string" && tipster.roi ? tipster.roi : formatSignedPercent(roiValue);
+  const yieldText = typeof tipster?.yield === "string" && tipster.yield ? tipster.yield : formatSignedPercent(yieldValue);
+  const riskedUnits = toSafeNumber(tipster?.totalRiskedUnits, 0);
 
   return (
     <div className="tpz-page" style={{paddingTop:80,minHeight:"100vh",padding:"clamp(80px,12vw,100px) 5% 60px"}}>
@@ -3582,16 +3615,19 @@ function TipsterProfileView({ setView, tipsterName, picks }) {
           </div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:12}}>
             {[
-              [tipster?.roi||"+0%","ROI"],
+              [roiText||"+0%","ROI"],
+              [yieldText||"+0%","YIELD"],
+              [formatSignedUnits(netUnits),"Neto u"],
               [winRate+"%","Win Rate"],
               [formatOddsValue(avgOdds),"Momio prom"],
               [totalPicks,"Picks totales"],
               [won,"Ganados"],
               [lost,"Perdidos"],
-              [push,"Push"]
+              [push,"Void"],
+              [riskedUnits.toFixed(2)+"u","Riesgo u"]
             ].map(([v,l])=>(
               <div key={l} style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:"14px 12px",textAlign:"center"}}>
-                <div style={{fontFamily:"'Bebas Neue'",fontSize:"1.6rem",color:"var(--g)",lineHeight:1}}>{v}</div>
+                <div style={{fontFamily:"'Bebas Neue'",fontSize:"1.6rem",color:(l==="ROI"||l==="YIELD"||l==="Neto u")&&(String(v).trim().startsWith("-"))?"#f44336":"var(--g)",lineHeight:1}}>{v}</div>
                 <div style={{fontSize:"0.62rem",color:"var(--muted)",letterSpacing:1,marginTop:3}}>{l}</div>
               </div>
             ))}
@@ -3739,7 +3775,7 @@ export default function App() {
       {view==="home"             && <HomeView        setView={gotoView} setPurchaseTarget={setPurchaseTarget} picks={picks} setSelectedTipster={setSelectedTipster}/>}
       {view==="marketplace"      && <MarketplaceView setView={gotoView} setPurchaseTarget={setPurchaseTarget} picks={picks} setSelectedTipster={setSelectedTipster}/>}
       {view==="purchase"         && <PurchaseView    key={`${user?._id||'anon'}-${purchaseTarget?._id||'none'}`} pick={purchaseTarget} setView={gotoView} user={user}/>}
-      {view==="rankings"         && <RankingsView    setView={gotoView} picks={picks}/>}
+      {view==="rankings"         && <RankingsView    setView={gotoView} picks={picks} setSelectedTipster={setSelectedTipster}/>}
       {view==="login"            && <AuthView        setView={gotoView} setUser={setUser} mode="login"/>}
       {view==="register"         && <AuthView        setView={gotoView} setUser={setUser} mode="register"/>}
       {view==="profile"          && <ProfileView     setView={gotoView} user={user} setUser={setUser} setSelectedTipster={setSelectedTipster}/>}
