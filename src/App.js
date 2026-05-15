@@ -608,6 +608,66 @@ const PARLAY_SPORT_OPTIONS = [
   { key: "tennis", icon: "🎾", label: "Tenis" },
   { key: "mma", icon: "🥊", label: "MMA/Box" },
 ];
+const DEFAULT_PROP_STAT_OPTIONS = [
+  { value: "points", label: "Points", requiresPlayer: true },
+  { value: "rebounds", label: "Rebounds", requiresPlayer: true },
+  { value: "assists", label: "Assists", requiresPlayer: true },
+  { value: "goals", label: "Goals", requiresPlayer: true },
+  { value: "shots_on_target", label: "Shots on Target", requiresPlayer: true },
+];
+const PROP_STAT_OPTIONS_BY_SPORT = {
+  basketball: [
+    { value: "points", label: "Points", requiresPlayer: true },
+    { value: "rebounds", label: "Rebounds", requiresPlayer: true },
+    { value: "assists", label: "Assists", requiresPlayer: true },
+    { value: "threes", label: "Triples", requiresPlayer: true },
+  ],
+  baseball: [
+    { value: "hits", label: "Hits", requiresPlayer: true },
+    { value: "runs", label: "Runs", requiresPlayer: true },
+    { value: "rbi", label: "RBI", requiresPlayer: true },
+    { value: "home_runs", label: "Home Runs", requiresPlayer: true },
+    { value: "strikeouts", label: "Strikeouts", requiresPlayer: true },
+  ],
+  americanfootball: [
+    { value: "passing_yards", label: "Passing Yards", requiresPlayer: true },
+    { value: "rushing_yards", label: "Rushing Yards", requiresPlayer: true },
+    { value: "receiving_yards", label: "Receiving Yards", requiresPlayer: true },
+    { value: "touchdowns", label: "Touchdowns", requiresPlayer: true },
+  ],
+  soccer: [
+    { value: "goals", label: "Goals (jugador)", requiresPlayer: true },
+    { value: "shots", label: "Shots (jugador)", requiresPlayer: true },
+    { value: "shots_on_target", label: "Shots on Target (jugador)", requiresPlayer: true },
+    { value: "corners", label: "Corners (equipo/partido)", requiresPlayer: false },
+    { value: "yellow_cards", label: "Tarjetas amarillas", requiresPlayer: false },
+    { value: "red_cards", label: "Tarjetas rojas", requiresPlayer: false },
+    { value: "cards_total", label: "Tarjetas totales", requiresPlayer: false },
+    { value: "fouls", label: "Fouls", requiresPlayer: false },
+    { value: "offsides", label: "Offsides", requiresPlayer: false },
+  ],
+};
+function resolveSportCodeFromSportKey(sportKey) {
+  const key = String(sportKey || "").toLowerCase();
+  if (!key) return "";
+  if (key.includes("soccer")) return "soccer";
+  if (key.includes("basketball")) return "basketball";
+  if (key.includes("americanfootball") || key.includes("nfl")) return "americanfootball";
+  if (key.includes("baseball") || key.includes("mlb")) return "baseball";
+  return "";
+}
+function getPropStatOptionsForSportKey(sportKey) {
+  const sportCode = resolveSportCodeFromSportKey(sportKey);
+  return PROP_STAT_OPTIONS_BY_SPORT[sportCode] || DEFAULT_PROP_STAT_OPTIONS;
+}
+function doesPropStatRequirePlayer(statType, sportKey) {
+  const stat = String(statType || "").trim();
+  if (!stat) return true;
+  const options = getPropStatOptionsForSportKey(sportKey);
+  const selected = options.find((item)=>item.value===stat);
+  if (selected) return selected.requiresPlayer !== false;
+  return true;
+}
 
 function LeagueLogo({ league, size = 24, inline = false }) {
   const [errored, setErrored] = useState(false);
@@ -1392,20 +1452,108 @@ function RankingsView({ setView, picks, setSelectedTipster }) {
 }
 
 // ── AUTH VIEW ─────────────────────────────────────────────────────────────────
-function AuthView({ setView, setUser, mode, authSystemMessage }) {
+function AuthView({ setView, setUser, mode, authSystemMessage, resetToken }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(false);
+  const requiresPassword = mode==="login"||mode==="register"||mode==="reset";
+  const requiresConfirmPassword = mode==="register"||mode==="reset";
+  const isStrongPassword = (value) => /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{10,}$/.test(String(value || ""));
+  const trimmedName = String(name || "").trim();
+  const trimmedEmail = String(email || "").trim();
+  const hasResetToken = String(resetToken || "").trim().length > 0;
+  const hasStrongPassword = isStrongPassword(password);
+  const passwordsMatch = String(password || "") === String(confirmPassword || "");
+  const canSubmit = (() => {
+    if (loading) return false;
+    if (mode==="login") return Boolean(trimmedEmail && password);
+    if (mode==="register") return Boolean(trimmedName && trimmedEmail && password && confirmPassword && hasStrongPassword && passwordsMatch);
+    if (mode==="forgot") return Boolean(trimmedEmail);
+    if (mode==="reset") return Boolean(hasResetToken && password && confirmPassword && hasStrongPassword && passwordsMatch);
+    return false;
+  })();
+
+  useEffect(()=>{
+    setError("");
+    setNotice("");
+  },[mode, resetToken]);
 
   async function handleSubmit() {
+    const normalizedEmail = String(email || "").trim().toLowerCase();
+    const normalizedName = String(name || "").trim();
+    const normalizedPassword = String(password || "");
+    const normalizedConfirmPassword = String(confirmPassword || "");
+    setError("");
+    setNotice("");
+    if (mode==="forgot") {
+      if (!normalizedEmail) {
+        setError("Ingresa tu correo");
+        return;
+      }
+      setLoading(true);
+      try {
+        const r = await fetch(BACKEND_URL+"/api/auth/forgot-password", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:normalizedEmail})});
+        const data = await r.json().catch(()=>null);
+        if (!r.ok) { setError(data?.error||"No se pudo enviar recuperación"); setLoading(false); return; }
+        setNotice(data?.message || "Si el correo existe, enviaremos instrucciones para restablecer tu contraseña.");
+      } catch(e) { setError("Error de conexión"); }
+      setLoading(false);
+      return;
+    }
+    if (mode==="reset") {
+      if (!String(resetToken || "").trim()) {
+        setError("Token de recuperación inválido o ausente");
+        return;
+      }
+      if (!normalizedPassword) {
+        setError("Ingresa tu nueva contraseña");
+        return;
+      }
+      if (!isStrongPassword(normalizedPassword)) {
+        setError("La contraseña debe tener mínimo 10 caracteres, mayúscula, minúscula, número y símbolo");
+        return;
+      }
+      if (normalizedPassword !== normalizedConfirmPassword) {
+        setError("Las contraseñas no coinciden");
+        return;
+      }
+      setLoading(true);
+      try {
+        const r = await fetch(BACKEND_URL+"/api/auth/reset-password", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token:resetToken,password:normalizedPassword})});
+        const data = await r.json().catch(()=>null);
+        if (!r.ok) { setError(data?.error||"No se pudo restablecer contraseña"); setLoading(false); return; }
+        setNotice(data?.message || "Contraseña actualizada correctamente. Ya puedes iniciar sesión.");
+        window.history.replaceState({}, document.title, window.location.pathname);
+        setTimeout(()=>setView("login"),1200);
+      } catch(e) { setError("Error de conexión"); }
+      setLoading(false);
+      return;
+    }
+    if (mode==="register") {
+      if (!normalizedName || !normalizedEmail || !normalizedPassword) {
+        setError("Completa todos los campos");
+        return;
+      }
+      if (!isStrongPassword(normalizedPassword)) {
+        setError("La contraseña debe tener mínimo 10 caracteres, mayúscula, minúscula, número y símbolo");
+        return;
+      }
+      if (normalizedPassword !== normalizedConfirmPassword) {
+        setError("Las contraseñas no coinciden");
+        return;
+      }
+    }
     setLoading(true); setError("");
     setNotice("");
     try {
       const endpoint = mode==="login" ? "/api/auth/login" : "/api/auth/register";
-      const body = mode==="login" ? {email,password} : {name,email,password};
+      const body = mode==="login" ? {email:normalizedEmail,password:normalizedPassword} : {name:normalizedName,email:normalizedEmail,password:normalizedPassword};
       const r = await fetch(BACKEND_URL+endpoint, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
       const data = await r.json();
       if (!r.ok) { setError(data.error||"Error"); setLoading(false); return; }
@@ -1421,26 +1569,52 @@ function AuthView({ setView, setUser, mode, authSystemMessage }) {
   }
 
   const iStyle = {width:"100%",background:"var(--d4)",border:"1px solid var(--border)",borderRadius:8,padding:"12px 14px",color:"var(--text)",fontSize:"0.95rem",outline:"none",marginBottom:12,boxSizing:"border-box"};
+  const passwordWrapperStyle = {position:"relative",marginBottom:12};
+  const passwordInputStyle = {...iStyle,marginBottom:0,paddingRight:58};
+  const passwordToggleStyle = {position:"absolute",top:0,right:0,height:"100%",background:"none",border:"none",color:"var(--g)",fontWeight:700,fontSize:"0.72rem",padding:"0 12px",cursor:"pointer"};
 
   return (
     <div className="tpz-centered-page" style={{paddingTop:80,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:"clamp(80px,12vw,100px) 5% 60px"}}>
       <div style={{maxWidth:420,width:"100%",animation:"popIn .4s ease"}}>
         <div style={{background:"var(--d2)",border:"1px solid var(--border)",borderRadius:16,padding:32}}>
           <h2 style={{fontFamily:"'Bebas Neue'",fontSize:"2rem",marginBottom:24,textAlign:"center"}}>
-            {mode==="login"?"Iniciar Sesión":"Crear Cuenta"}
+            {mode==="login"?"Iniciar Sesión":mode==="register"?"Crear Cuenta":mode==="forgot"?"Recuperar contraseña":"Restablecer contraseña"}
           </h2>
           {authSystemMessage && mode==="login" && <div style={{background:"rgba(29,185,84,0.1)",border:"1px solid rgba(29,185,84,0.35)",color:"var(--g)",padding:"8px 10px",borderRadius:8,fontSize:"0.8rem",marginBottom:12}}>{authSystemMessage}</div>}
           {mode==="register" && <input value={name} onChange={e=>setName(e.target.value)} placeholder="Nombre completo" style={iStyle}/>}
-          <input value={email} onChange={e=>setEmail(e.target.value)} placeholder="Email" type="email" style={iStyle}/>
-          <input value={password} onChange={e=>setPassword(e.target.value)} placeholder="Contraseña" type="password" style={iStyle}/>
+          {(mode==="login"||mode==="register"||mode==="forgot") && <input value={email} onChange={e=>setEmail(e.target.value)} placeholder="Email" type="email" style={iStyle}/>}
+          {requiresPassword && (
+            <div style={passwordWrapperStyle}>
+              <input value={password} onChange={e=>setPassword(e.target.value)} placeholder={mode==="reset"?"Nueva contraseña":"Contraseña"} type={showPassword?"text":"password"} style={passwordInputStyle}/>
+              <button type="button" onClick={()=>setShowPassword(v=>!v)} style={passwordToggleStyle}>{showPassword?"Ocultar":"Ver"}</button>
+            </div>
+          )}
+          {requiresConfirmPassword && (
+            <div style={passwordWrapperStyle}>
+              <input value={confirmPassword} onChange={e=>setConfirmPassword(e.target.value)} placeholder="Confirmar contraseña" type={showConfirmPassword?"text":"password"} style={passwordInputStyle}/>
+              <button type="button" onClick={()=>setShowConfirmPassword(v=>!v)} style={passwordToggleStyle}>{showConfirmPassword?"Ocultar":"Ver"}</button>
+            </div>
+          )}
+          {(mode==="register"||mode==="reset") && <div style={{fontSize:"0.72rem",color:"var(--muted)",marginBottom:12}}>Mínimo 10 caracteres con mayúscula, minúscula, número y símbolo.</div>}
+          {mode==="login" && (
+            <div style={{textAlign:"center",fontSize:"0.76rem",marginBottom:10}}>
+              <button type="button" onClick={()=>setView("forgot-password")} style={{background:"none",border:"none",color:"var(--g)",cursor:"pointer",fontWeight:700}}>
+                ¿Olvidaste tu contraseña?
+              </button>
+            </div>
+          )}
           {error && <div style={{color:"#f44336",fontSize:"0.82rem",marginBottom:12}}>{error}</div>}
           {notice && <div style={{color:"var(--g)",fontSize:"0.8rem",marginBottom:12}}>{notice}</div>}
-          <button onClick={handleSubmit} disabled={loading} style={{width:"100%",background:"var(--g)",color:"#000",border:"none",padding:"13px",borderRadius:8,fontFamily:"'Barlow Condensed'",fontSize:"1rem",fontWeight:900,letterSpacing:2,cursor:"pointer",marginBottom:16}}>
-            {loading?"...":mode==="login"?"ENTRAR":"CREAR CUENTA"}
+          <button onClick={handleSubmit} disabled={!canSubmit} style={{width:"100%",background:"var(--g)",color:"#000",border:"none",padding:"13px",borderRadius:8,fontFamily:"'Barlow Condensed'",fontSize:"1rem",fontWeight:900,letterSpacing:2,cursor:canSubmit?"pointer":"not-allowed",opacity:canSubmit?1:0.6,marginBottom:16}}>
+            {loading?"...":mode==="login"?"ENTRAR":mode==="register"?"CREAR CUENTA":mode==="forgot"?"ENVIAR EMAIL":"ACTUALIZAR CONTRASEÑA"}
           </button>
           <div style={{textAlign:"center",fontSize:"0.82rem",color:"var(--muted)"}}>
             {mode==="login" ? (
               <span>¿No tienes cuenta? <button onClick={()=>setView("register")} style={{background:"none",border:"none",color:"var(--g)",cursor:"pointer",fontWeight:700}}>Regístrate</button></span>
+            ) : mode==="forgot" ? (
+              <span>¿Recordaste tu contraseña? <button onClick={()=>setView("login")} style={{background:"none",border:"none",color:"var(--g)",cursor:"pointer",fontWeight:700}}>Inicia sesión</button></span>
+            ) : mode==="reset" ? (
+              <span>¿Volver al inicio de sesión? <button onClick={()=>setView("login")} style={{background:"none",border:"none",color:"var(--g)",cursor:"pointer",fontWeight:700}}>Entrar</button></span>
             ) : (
               <span>¿Ya tienes cuenta? <button onClick={()=>setView("login")} style={{background:"none",border:"none",color:"var(--g)",cursor:"pointer",fontWeight:700}}>Inicia sesión</button></span>
             )}
@@ -1467,7 +1641,8 @@ function ProfileView({ setView, user, setUser, setSelectedTipster }) {
   const [saveWarning, setSaveWarning] = useState("");
   const [connectSyncing, setConnectSyncing] = useState(false);
   const [connectRedirecting, setConnectRedirecting] = useState(false);
-  const canConfigurePayout = Boolean(user?._id || user?.id);
+  const isProProfile = ["pro","tipster","admin"].includes(String(user?.role||"").toLowerCase());
+  const canConfigurePayout = isProProfile && Boolean(user?._id || user?.id);
 
   useEffect(()=>{
     if (editMode) return;
@@ -1550,6 +1725,21 @@ function ProfileView({ setView, user, setUser, setSelectedTipster }) {
     if (!canConfigurePayout) return;
     syncConnectStatus(false);
   },[user?._id]);
+
+  useEffect(()=>{
+    if (!canConfigurePayout) return;
+    const params = new URLSearchParams(window.location.search);
+    const stripeFlow = params.get("stripe");
+    if (!["connect-return","connect-refresh"].includes(String(stripeFlow||"").toLowerCase())) return;
+    setSaveWarning(stripeFlow === "connect-return"
+      ? "Regresaste de Stripe Connect. Verificando estado de onboarding..."
+      : "Stripe solicitó refrescar onboarding. Verificando estado actual...");
+    syncConnectStatus(true);
+    params.delete("stripe");
+    const nextQuery = params.toString();
+    const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}${window.location.hash || ""}`;
+    window.history.replaceState({}, "", nextUrl);
+  },[canConfigurePayout, user?._id]);
 
   async function handleSave() {
     const cleanName = String(name||"").trim();
@@ -1715,6 +1905,9 @@ function ProfileView({ setView, user, setUser, setSelectedTipster }) {
               <button onClick={()=>setView("become-pro")} style={{background:"var(--g)",color:"#000",border:"none",padding:"10px 24px",borderRadius:6,fontFamily:"'Barlow Condensed'",fontSize:"0.9rem",fontWeight:900,letterSpacing:2,cursor:"pointer"}}>
                 UPGRADE A PRO
               </button>
+              <div style={{marginTop:8,fontSize:"0.72rem",color:"var(--muted)"}}>
+                La configuración de Stripe Connect para cobros está disponible en perfiles Pro/Tipster.
+              </div>
             </div>
           )}
         </div>
@@ -1875,6 +2068,10 @@ function ProPanelView({ user, addPick, setView, picks }) {
   const todayKey = "tpz_picks_today_"+PICK_COUNTER_VERSION+"_"+new Date().toDateString();
   const todayCount = parseInt(localStorage.getItem(todayKey)||"0");
   const remaining = Math.max(0, 3-todayCount);
+  const currentSportKey = match?.sportKey || league?.key || "";
+  const propStatOptions = getPropStatOptionsForSportKey(currentSportKey);
+  const selectedPropStat = propStatOptions.find((item)=>item.value===propStatType) || null;
+  const propStatRequiresPlayer = doesPropStatRequirePlayer(propStatType, currentSportKey);
 
   const mainLeagues = MAIN_LEAGUE_KEYS_ORDER.map((key, idx)=>{
     const existing = oddsSports.find((leagueItem)=>leagueItem.key===key);
@@ -2039,6 +2236,12 @@ function ProPanelView({ user, addPick, setView, picks }) {
   useEffect(()=>{
     if(screen==="straight-match"&&league&&liveMatches===null&&!loadingMatches) fetchMatches(league);
   },[screen,league]);
+  useEffect(()=>{
+    if (marketType !== "player_prop") return;
+    if (propStatOptions.some((item)=>item.value===propStatType)) return;
+    const fallbackStat = propStatOptions[0]?.value || "points";
+    if (fallbackStat !== propStatType) setPropStatType(fallbackStat);
+  }, [marketType, propStatType, propStatOptions]);
 
   function resetFlowValues() {
     setBetType(null);
@@ -2112,13 +2315,18 @@ function ProPanelView({ user, addPick, setView, picks }) {
     if (nextMarketType === "moneyline") {
       setLineValue("");
     }
-    if (nextMarketType !== "player_prop") {
+    if (nextMarketType === "player_prop") {
+      const nextOptions = getPropStatOptionsForSportKey(match?.sportKey || league?.key || "");
+      if (nextOptions.length > 0 && !nextOptions.some((item)=>item.value===propStatType)) {
+        setPropStatType(nextOptions[0].value);
+      }
+    } else {
       setPlayerName("");
       setPropStatType("points");
     }
   }
 
-  function buildStraightSelectionLabel(currentMarketType, currentSide, currentLine, currentPlayerName, currentPropStatType) {
+  function buildStraightSelectionLabel(currentMarketType, currentSide, currentLine, currentPlayerName, currentPropStatType, currentSportKey) {
     const lineNumber = Number.parseFloat(currentLine);
     const hasLine = Number.isFinite(lineNumber);
     const lineText = hasLine ? `${lineNumber > 0 ? "+" : ""}${lineNumber}` : String(currentLine || "").trim();
@@ -2135,8 +2343,18 @@ function ProPanelView({ user, addPick, setView, picks }) {
       return `${currentSide === "under" ? "Under" : "Over"} ${lineText}`;
     }
     if (currentMarketType === "player_prop") {
-      const cleanPlayer = String(currentPlayerName || "").trim() || "Jugador";
-      return `${cleanPlayer} ${currentSide === "under" ? "Under" : "Over"} ${lineText} ${currentPropStatType || "stat"}`;
+      const statLabel = String(currentPropStatType || "stat").trim() || "stat";
+      const statNeedsPlayer = doesPropStatRequirePlayer(statLabel, currentSportKey);
+      if (statNeedsPlayer) {
+        const cleanPlayer = String(currentPlayerName || "").trim() || "Jugador";
+        return `${cleanPlayer} ${currentSide === "under" ? "Under" : "Over"} ${lineText} ${statLabel}`;
+      }
+      const scopeLabel = currentSide === "away"
+        ? (awayName || "Away")
+        : currentSide === "home"
+          ? (homeName || "Home")
+          : "Match";
+      return `${scopeLabel} ${currentSide === "under" ? "Under" : "Over"} ${lineText} ${statLabel}`;
     }
     return `${homeName} vs ${awayName}`;
   }
@@ -2151,6 +2369,11 @@ function ProPanelView({ user, addPick, setView, picks }) {
     const parsedLine = normalizedLineText === "" ? Number.NaN : Number.parseFloat(normalizedLineText);
     const normalizedPlayerName = String(playerName || "").trim();
     const normalizedBookmaker = String(bookmaker || "").trim();
+    const normalizedStatType = String(propStatType || "").trim();
+    const sportKeyForProp = match?.sportKey || league?.key || "";
+    const availablePropStats = getPropStatOptionsForSportKey(sportKeyForProp);
+    const statTypeIsValidForSport = availablePropStats.some((item)=>item.value===normalizedStatType);
+    const statRequiresPlayerForPublish = doesPropStatRequirePlayer(normalizedStatType, sportKeyForProp);
     const selectedParlaySportOptions = PARLAY_SPORT_OPTIONS.filter((option)=>parlaySports.includes(option.key));
     const parsedParlayDate = parlayStartTime ? new Date(parlayStartTime) : null;
     const hasValidParlayDate = parsedParlayDate && Number.isFinite(parsedParlayDate.getTime());
@@ -2162,7 +2385,8 @@ function ProPanelView({ user, addPick, setView, picks }) {
     if(betType==="straight" && (marketType==="moneyline" || marketType==="spread") && !["home","away"].includes(selectionSide)){alert("Selecciona lado local o visitante");return;}
     if(betType==="straight" && (marketType==="total" || marketType==="player_prop") && !["over","under"].includes(selectionSide)){alert("Selecciona Over o Under");return;}
     if(betType==="straight" && (marketType==="spread" || marketType==="total" || marketType==="player_prop") && !Number.isFinite(parsedLine)){alert("Ingresa una línea válida");return;}
-    if(betType==="straight" && marketType==="player_prop" && !normalizedPlayerName){alert("Ingresa el nombre del jugador para prop");return;}
+    if(betType==="straight" && marketType==="player_prop" && !statTypeIsValidForSport){alert("Selecciona un stat válido para este deporte");return;}
+    if(betType==="straight" && marketType==="player_prop" && statRequiresPlayerForPublish && !normalizedPlayerName){alert("Ingresa el nombre del jugador para prop");return;}
     if(betType==="parlay" && !hasValidParlayDate){alert("Selecciona el horario de inicio del parlay");return;}
     if(betType==="parlay" && selectedParlaySportOptions.length===0){alert("Selecciona al menos un deporte para el parlay");return;}
 
@@ -2173,7 +2397,7 @@ function ProPanelView({ user, addPick, setView, picks }) {
       const parlaySportLabels = selectedParlaySportOptions.map((option)=>option.label).join(", ");
       const parlayStartIso = hasValidParlayDate ? parsedParlayDate.toISOString() : "";
       const parlayStartDisplay = parlayStartIso ? isoToLocal(parlayStartIso) : "Hora por confirmar";
-      const straightSelectionLabel = buildStraightSelectionLabel(marketType, selectionSide, normalizedLineText, normalizedPlayerName, propStatType);
+      const straightSelectionLabel = buildStraightSelectionLabel(marketType, selectionSide, normalizedLineText, normalizedPlayerName, normalizedStatType, sportKeyForProp);
       const basePayload = {
         tipster: user?.name||"Tipster",
         tipsterId: user?._id||user?.id,
@@ -2206,8 +2430,8 @@ function ProPanelView({ user, addPick, setView, picks }) {
         selection: straightSelectionLabel,
         side: selectionSide,
         line: Number.isFinite(parsedLine) ? parsedLine : null,
-        playerName: marketType==="player_prop" ? normalizedPlayerName : null,
-        statType: marketType==="player_prop" ? propStatType : null,
+        playerName: marketType==="player_prop" && statRequiresPlayerForPublish ? normalizedPlayerName : null,
+        statType: marketType==="player_prop" ? normalizedStatType : null,
         bookmaker: normalizedBookmaker || null,
         homeTeam: match?.home || null,
         awayTeam: match?.away || null,
@@ -2505,7 +2729,7 @@ function ProPanelView({ user, addPick, setView, picks }) {
                 <option value="moneyline">Moneyline</option>
                 <option value="spread">Spread</option>
                 <option value="total">Total</option>
-                <option value="player_prop">Player Prop</option>
+                <option value="player_prop">Prop</option>
               </select>
             </div>
             <div>
@@ -2533,24 +2757,19 @@ function ProPanelView({ user, addPick, setView, picks }) {
             {marketType==="player_prop" && (
               <>
                 <div>
-                  <div style={{fontSize:"0.66rem",color:"var(--muted)",marginBottom:6}}>Jugador</div>
-                  <input type="text" value={playerName} onChange={(e)=>setPlayerName(e.target.value)} placeholder="Nombre del jugador" style={{width:"100%",background:"var(--d4)",border:"1px solid var(--border)",outline:"none",color:"var(--text)",borderRadius:8,padding:"9px 10px",fontWeight:600}}/>
-                </div>
-                <div>
                   <div style={{fontSize:"0.66rem",color:"var(--muted)",marginBottom:6}}>Stat</div>
                   <select value={propStatType} onChange={(e)=>setPropStatType(e.target.value)} style={{width:"100%",background:"var(--d4)",border:"1px solid var(--border)",color:"var(--text)",borderRadius:8,padding:"9px 10px",fontWeight:700}}>
-                    <option value="points">Points</option>
-                    <option value="rebounds">Rebounds</option>
-                    <option value="assists">Assists</option>
-                    <option value="passing_yards">Passing Yards</option>
-                    <option value="rushing_yards">Rushing Yards</option>
-                    <option value="receiving_yards">Receiving Yards</option>
-                    <option value="hits">Hits</option>
-                    <option value="strikeouts">Strikeouts</option>
-                    <option value="shots_on_target">Shots on Target</option>
-                    <option value="goals">Goals</option>
+                    {propStatOptions.map((option)=>(
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
                   </select>
                 </div>
+                {propStatRequiresPlayer && (
+                  <div>
+                    <div style={{fontSize:"0.66rem",color:"var(--muted)",marginBottom:6}}>Jugador</div>
+                    <input type="text" value={playerName} onChange={(e)=>setPlayerName(e.target.value)} placeholder="Nombre del jugador" style={{width:"100%",background:"var(--d4)",border:"1px solid var(--border)",outline:"none",color:"var(--text)",borderRadius:8,padding:"9px 10px",fontWeight:600}}/>
+                  </div>
+                )}
               </>
             )}
             <div style={{gridColumn:"1 / -1"}}>
@@ -3865,6 +4084,7 @@ export default function App() {
   const [selectedTipster, setSelectedTipster] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [authSystemMessage, setAuthSystemMessage] = useState("");
+  const [resetPasswordToken, setResetPasswordToken] = useState("");
 
   // Restore session
   useEffect(()=>{
@@ -3906,6 +4126,17 @@ export default function App() {
           setView("login");
           clearCheckoutQueryParams();
         });
+    }
+    if (flow === "reset-password") {
+      const token = String(params.get("token") || "").trim();
+      if (!token) {
+        setAuthSystemMessage("Token de recuperación no encontrado.");
+        setView("login");
+        clearCheckoutQueryParams();
+        return;
+      }
+      setResetPasswordToken(token);
+      setView("reset-password");
     }
   },[]);
 
@@ -4006,6 +4237,8 @@ export default function App() {
       {view==="rankings"         && <RankingsView    setView={gotoView} picks={picks} setSelectedTipster={setSelectedTipster}/>}
       {view==="login"            && <AuthView        setView={gotoView} setUser={setUser} mode="login" authSystemMessage={authSystemMessage}/>}
       {view==="register"         && <AuthView        setView={gotoView} setUser={setUser} mode="register" authSystemMessage={authSystemMessage}/>}
+      {view==="forgot-password"  && <AuthView        setView={gotoView} setUser={setUser} mode="forgot" authSystemMessage={authSystemMessage}/>}
+      {view==="reset-password"   && <AuthView        setView={gotoView} setUser={setUser} mode="reset" authSystemMessage={authSystemMessage} resetToken={resetPasswordToken}/>}
       {view==="profile"          && <ProfileView     setView={gotoView} user={user} setUser={setUser} setSelectedTipster={setSelectedTipster}/>}
       {view==="become-pro"       && <BecomeProView   setView={gotoView} user={user} setUser={setUser}/>}
       {view==="pro-panel"        && <ProPanelView    user={user} addPick={addPick} setView={gotoView} picks={picks}/>}
