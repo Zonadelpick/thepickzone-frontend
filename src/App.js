@@ -184,10 +184,9 @@ function isValidClabe(value) {
 }
 
 function getPickShareUrl(pick) {
-  const base = `${window.location.origin}${window.location.pathname}`;
   const pickId = pick?._id || pick?.id;
-  if (!pickId) return base;
-  return `${base}?flow=pick&pickId=${encodeURIComponent(String(pickId))}`;
+  if (!pickId) return `${window.location.origin}${window.location.pathname}`;
+  return `${BACKEND_URL}/share/pick/${encodeURIComponent(String(pickId))}`;
 }
 
 function getPickShareText(pick) {
