@@ -3144,6 +3144,9 @@ function AdminPanel({ setView, user, picks }) {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : 0;
   }
+  function getPickAiArgument(pick) {
+    return pick?.verification?.summary || pick?.verification?.closureReason || pick?.aiAnalysis?.detalle || "";
+  }
 
   function getPickStatusForFilter(pick) {
     const verificationStatus = String(pick?.verification?.status || "").toLowerCase();
@@ -3454,7 +3457,7 @@ function AdminPanel({ setView, user, picks }) {
               const evidenceItems = Array.isArray(verification.evidence) && verification.evidence.length>0
                 ? verification.evidence
                 : (Array.isArray(p.aiAnalysis?.evidence) ? p.aiAnalysis.evidence : []);
-              const closureReason = verification.closureReason || verification.summary || "";
+              const aiArgument = getPickAiArgument(p);
               const betSummary = [p.bet?.marketType, p.bet?.selection].filter(Boolean).join(" · ");
               const reopenedBy = verification.reopenedBy ? ` por ${verification.reopenedBy}` : "";
               const reopenedAt = verification.reopenedAt ? ` · ${new Date(verification.reopenedAt).toLocaleString("es-MX")}` : "";
@@ -3483,7 +3486,10 @@ function AdminPanel({ setView, user, picks }) {
                         )}
                       </div>
                       {betSummary && <div style={{fontSize:"0.68rem",color:"var(--text-dim)",marginBottom:4}}>Mercado: {betSummary}</div>}
-                      {closureReason && <div style={{fontSize:"0.68rem",color:"var(--text-dim)",marginBottom:4}}>Resumen: {closureReason}</div>}
+                      {Number.isFinite(preliminaryConfidence) && (
+                        <div style={{fontSize:"0.68rem",color:"var(--gold)",marginBottom:4}}>Confianza IA: {preliminaryConfidence}%</div>
+                      )}
+                      {aiArgument && <div style={{fontSize:"0.68rem",color:"var(--text-dim)",marginBottom:4}}>Argumento IA: {aiArgument}</div>}
                       {String(verification.status||"").toLowerCase()==="reopened" && (
                         <div style={{fontSize:"0.68rem",color:"#8b8bff",marginBottom:4}}>Inconformidad / reapertura{reopenedBy}{reopenedAt}</div>
                       )}
@@ -3576,7 +3582,7 @@ function AdminPanel({ setView, user, picks }) {
               const evidenceItems = Array.isArray(verification.evidence) && verification.evidence.length>0
                 ? verification.evidence
                 : (Array.isArray(p.aiAnalysis?.evidence) ? p.aiAnalysis.evidence : []);
-              const closureReason = verification.closureReason || verification.summary || "";
+              const aiArgument = getPickAiArgument(p);
               const reopenedBy = verification.reopenedBy ? ` por ${verification.reopenedBy}` : "";
               const reopenedAt = verification.reopenedAt ? ` · ${new Date(verification.reopenedAt).toLocaleString("es-MX")}` : "";
               return (
@@ -3603,7 +3609,10 @@ function AdminPanel({ setView, user, picks }) {
                     </div>
                   )}
                   {betSummary && <div style={{fontSize:"0.68rem",color:"var(--text-dim)",marginBottom:4}}>Mercado: {betSummary}</div>}
-                  {closureReason && <div style={{fontSize:"0.68rem",color:"var(--text-dim)",marginBottom:4}}>Resumen: {closureReason}</div>}
+                  {Number.isFinite(preliminaryConfidence) && (
+                    <div style={{fontSize:"0.68rem",color:"var(--gold)",marginBottom:4}}>Confianza IA: {preliminaryConfidence}%</div>
+                  )}
+                  {aiArgument && <div style={{fontSize:"0.68rem",color:"var(--text-dim)",marginBottom:4}}>Argumento IA: {aiArgument}</div>}
                   {String(verification.status||"").toLowerCase()==="reopened" && (
                     <div style={{fontSize:"0.68rem",color:"#8b8bff",marginBottom:6}}>Inconformidad / reapertura{reopenedBy}{reopenedAt}</div>
                   )}
