@@ -64,6 +64,21 @@ const G = `
   @media (max-width: 640px) {
     .tpz-share-modal-card { width: calc(100vw - 18px) !important; padding: 14px !important; }
     .tpz-share-preview-img { max-height: 56vh !important; }
+    .tpz-two-col-grid { grid-template-columns: 1fr !important; }
+    .tpz-ranking-filters { justify-content: flex-start !important; flex-wrap: wrap !important; }
+    .tpz-auth-card { padding: 22px 16px !important; border-radius: 12px !important; }
+    .tpz-purchase-card { max-width: 100% !important; }
+    .tpz-footer {
+      padding: 24px 12px !important;
+      flex-direction: column !important;
+      align-items: flex-start !important;
+      gap: 12px !important;
+    }
+    .tpz-footer-links {
+      width: 100%;
+      flex-wrap: wrap !important;
+      gap: 10px !important;
+    }
   }
   @media (max-width: 768px) {
     .tpz-page,
@@ -1412,7 +1427,7 @@ function RankingsView({ setView, picks, setSelectedTipster }) {
           </h1>
           <p style={{color:"var(--muted)",fontSize:"0.88rem"}}>Rankings basados en resultados reales verificados</p>
         </div>
-        <div style={{display:"flex",gap:8,justifyContent:"center",marginBottom:28}}>
+        <div className="tpz-ranking-filters" style={{display:"flex",gap:8,justifyContent:"center",marginBottom:28}}>
           {[["roi","📊 ROI"],["winrate","🎯 Win Rate"],["picks","📈 Picks"]].map(([v,l])=>(
             <button key={v} onClick={()=>setSortBy(v)} style={{background:sortBy===v?"var(--g)":"var(--d3)",color:sortBy===v?"#000":"var(--muted)",border:"1px solid var(--border)",padding:"8px 16px",borderRadius:6,cursor:"pointer",fontSize:"0.78rem",fontWeight:700}}>
               {l}
@@ -1575,7 +1590,7 @@ function AuthView({ setView, setUser, mode, authSystemMessage, resetToken }) {
   return (
     <div className="tpz-centered-page" style={{paddingTop:80,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:"clamp(80px,12vw,100px) 5% 60px"}}>
       <div style={{maxWidth:420,width:"100%",animation:"popIn .4s ease"}}>
-        <div style={{background:"var(--d2)",border:"1px solid var(--border)",borderRadius:16,padding:32}}>
+        <div className="tpz-auth-card" style={{background:"var(--d2)",border:"1px solid var(--border)",borderRadius:16,padding:32}}>
           <h2 style={{fontFamily:"'Bebas Neue'",fontSize:"2rem",marginBottom:24,textAlign:"center"}}>
             {mode==="login"?"Iniciar Sesión":mode==="register"?"Crear Cuenta":mode==="forgot"?"Recuperar contraseña":"Restablecer contraseña"}
           </h2>
@@ -2711,7 +2726,7 @@ function ProPanelView({ user, addPick, setView, picks }) {
           </div>
           <div style={{fontSize:"0.72rem",color:"var(--g)",marginTop:4}}>{match?.leagueName||league?.name} · {match?.time}</div>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
+        <div className="tpz-two-col-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
           {[["Momio decimal",odds,setOdds,"decimal"],["Bank %",bank,setBank,"numeric"]].map(([label,val,setter,mode])=>(
             <div key={label} style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:"12px"}}>
               <div style={{fontSize:"0.68rem",color:"var(--muted)",letterSpacing:1,marginBottom:6}}>{label}</div>
@@ -2721,7 +2736,7 @@ function ProPanelView({ user, addPick, setView, picks }) {
         </div>
         <div style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:"12px",marginBottom:16}}>
           <div style={{fontSize:"0.68rem",color:"var(--muted)",letterSpacing:1,marginBottom:10}}>MERCADO / SELECCIÓN</div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          <div className="tpz-two-col-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
             <div>
               <div style={{fontSize:"0.66rem",color:"var(--muted)",marginBottom:6}}>Mercado</div>
               <select value={marketType} onChange={(e)=>handleMarketTypeChange(e.target.value)} style={{width:"100%",background:"var(--d4)",border:"1px solid var(--border)",color:"var(--text)",borderRadius:8,padding:"9px 10px",fontWeight:700}}>
@@ -2853,7 +2868,7 @@ function ProPanelView({ user, addPick, setView, picks }) {
               : "Selecciona uno o más deportes"}
           </div>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
+        <div className="tpz-two-col-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
           {[["Momio decimal",odds,setOdds,"decimal"],["Bank %",bank,setBank,"numeric"]].map(([label,val,setter,mode])=>(
             <div key={label} style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:"12px"}}>
               <div style={{fontSize:"0.68rem",color:"var(--muted)",letterSpacing:1,marginBottom:6}}>{label}</div>
@@ -3401,7 +3416,7 @@ function AdminPanel({ setView, user, picks }) {
 
         {tab==="results"&&(
           <div>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10,marginBottom:16}}>
               <div style={{fontSize:"0.82rem",color:"var(--muted)"}}>{filteredPendingPicks.length} de {pendingPicks.length} picks pendientes</div>
               <div style={{display:"flex",gap:8}}>
                 <button onClick={runAnalyzePendingPicks} style={{background:"rgba(29,185,84,0.15)",border:"1px solid var(--g)",color:"var(--g)",padding:"6px 14px",borderRadius:6,cursor:"pointer",fontSize:"0.75rem",fontWeight:700}}>Analizar</button>
@@ -3522,7 +3537,7 @@ function AdminPanel({ setView, user, picks }) {
 
         {tab==="history"&&(
           <div>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10,marginBottom:16}}>
               <div style={{fontSize:"0.82rem",color:"var(--muted)"}}>{filteredHistoryPicks.length} de {historyItems.length} picks en historial</div>
               <button onClick={loadData} style={{background:"var(--d4)",border:"1px solid var(--border)",color:"var(--text)",padding:"6px 12px",borderRadius:6,cursor:"pointer",fontSize:"0.74rem",fontWeight:700}}>↻ Refrescar</button>
             </div>
@@ -4253,9 +4268,9 @@ export default function App() {
       {view==="admin-panel"      && <AdminPanel      setView={gotoView} user={user} picks={picks}/>}
       {view==="revenue-dashboard"&& <RevenueDashboard setView={gotoView} picks={picks}/>}
       {view==="tipster-profile"   && <TipsterProfileView setView={gotoView} tipsterName={selectedTipster} picks={picks}/>}
-      <footer style={{background:"var(--dark)",borderTop:"1px solid var(--border)",padding:"40px 5%",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:20}}>
+      <footer className="tpz-footer" style={{background:"var(--dark)",borderTop:"1px solid var(--border)",padding:"40px 5%",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:20}}>
         <div style={{fontFamily:"'Bebas Neue'",fontSize:"1.2rem",letterSpacing:2,color:"var(--g)"}}>THE PICK ZONE</div>
-        <div style={{display:"flex",gap:20}}>{["Términos","Privacidad","Soporte"].map(l=><a key={l} href="#" style={{color:"var(--muted)",fontSize:"0.8rem",textDecoration:"none"}}>{l}</a>)}</div>
+        <div className="tpz-footer-links" style={{display:"flex",gap:20}}>{["Términos","Privacidad","Soporte"].map(l=><a key={l} href="#" style={{color:"var(--muted)",fontSize:"0.8rem",textDecoration:"none"}}>{l}</a>)}</div>
         <span style={{fontSize:"0.75rem",color:"var(--muted)"}}>© 2026 The Pick Zone</span>
       </footer>
     </>
