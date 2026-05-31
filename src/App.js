@@ -579,11 +579,307 @@ const G = `
     letter-spacing: 1.2px;
     text-transform: uppercase;
   }
+  .tpz-pro-shell {
+    background:
+      radial-gradient(circle at 84% 5%, rgba(29,185,84,0.14) 0%, rgba(29,185,84,0.03) 38%, transparent 62%),
+      radial-gradient(circle at 10% 0%, rgba(245,197,66,0.1) 0%, rgba(245,197,66,0.02) 34%, transparent 56%),
+      linear-gradient(180deg, rgba(11,15,14,0.99) 0%, rgba(9,13,11,1) 100%);
+  }
+  .tpz-pro-shell-inner {
+    max-width: 980px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .tpz-pro-hero {
+    background: linear-gradient(145deg, rgba(16,24,20,0.98) 0%, rgba(12,17,15,0.98) 100%);
+    border: 1px solid rgba(29,185,84,0.24);
+    border-radius: 16px;
+    padding: clamp(18px,3vw,30px);
+  }
+  .tpz-pro-hero-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .tpz-pro-hero-badge {
+    background: rgba(29,185,84,0.12);
+    border: 1px solid rgba(29,185,84,0.36);
+    color: #89edaa;
+    border-radius: 100px;
+    padding: 5px 10px;
+    font-size: 0.66rem;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+    font-weight: 800;
+  }
+  .tpz-pro-hero-title {
+    font-family: 'Bebas Neue';
+    font-size: clamp(2.2rem,5.4vw,3.9rem);
+    line-height: .9;
+    letter-spacing: 1.2px;
+    margin-bottom: 8px;
+  }
+  .tpz-pro-hero-title span { color: var(--g); }
+  .tpz-pro-hero-subtitle {
+    color: var(--text-dim);
+    font-size: 0.88rem;
+    line-height: 1.7;
+    max-width: 760px;
+  }
+  .tpz-pro-cta-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+  }
+  .tpz-pro-primary-btn {
+    background: var(--g);
+    color: #000;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 22px;
+    font-family: 'Barlow Condensed';
+    font-size: 0.9rem;
+    font-weight: 900;
+    letter-spacing: 1.8px;
+    cursor: pointer;
+  }
+  .tpz-pro-primary-btn:disabled {
+    background: var(--d4);
+    color: var(--muted);
+    cursor: not-allowed;
+  }
+  .tpz-pro-secondary-btn {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(29,185,84,0.45);
+    color: var(--g);
+    border-radius: 8px;
+    padding: 12px 18px;
+    cursor: pointer;
+    font-family: 'Barlow Condensed';
+    font-size: 0.84rem;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+  .tpz-pro-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(6,minmax(120px,1fr));
+    gap: 10px;
+  }
+  .tpz-pro-kpi-card {
+    background: rgba(17,24,21,0.92);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 11px;
+    text-align: center;
+  }
+  .tpz-pro-kpi-icon {
+    font-size: 1rem;
+    margin-bottom: 4px;
+  }
+  .tpz-pro-kpi-value {
+    font-family: 'Bebas Neue';
+    font-size: 1.65rem;
+    line-height: 1;
+    color: var(--g);
+  }
+  .tpz-pro-kpi-label {
+    margin-top: 4px;
+    font-size: 0.62rem;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    font-weight: 800;
+  }
+  .tpz-pro-kpi-meta {
+    margin-top: 4px;
+    font-size: 0.65rem;
+    color: var(--muted);
+  }
+  .tpz-pro-insights-grid {
+    display: grid;
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    gap: 10px;
+  }
+  .tpz-pro-panel-card {
+    background: var(--d3);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 13px;
+  }
+  .tpz-pro-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .tpz-pro-card-head h3 {
+    margin: 0;
+    font-family: 'Barlow Condensed';
+    font-size: 1.05rem;
+    letter-spacing: .8px;
+  }
+  .tpz-pro-card-head span {
+    font-size: 0.68rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 700;
+  }
+  .tpz-pro-progress-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .tpz-pro-progress-meta {
+    font-size: 0.69rem;
+    color: var(--text-dim);
+  }
+  .tpz-pro-progress-track {
+    height: 7px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .tpz-pro-progress-track span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, rgba(29,185,84,0.95) 0%, rgba(115,255,160,0.95) 100%);
+  }
+  .tpz-pro-record-grid {
+    display: grid;
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    gap: 8px;
+    margin-bottom: 9px;
+  }
+  .tpz-pro-record-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    font-size: 0.69rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+    padding: 7px 10px;
+    border: 1px solid transparent;
+  }
+  .tpz-pro-record-pill.won {
+    background: rgba(29,185,84,0.14);
+    border-color: rgba(29,185,84,0.35);
+    color: var(--g);
+  }
+  .tpz-pro-record-pill.lost {
+    background: rgba(244,67,54,0.14);
+    border-color: rgba(244,67,54,0.35);
+    color: #f44336;
+  }
+  .tpz-pro-record-pill.push {
+    background: rgba(245,197,66,0.14);
+    border-color: rgba(245,197,66,0.35);
+    color: var(--gold);
+  }
+  .tpz-pro-record-pill.pending {
+    background: rgba(107,128,120,0.14);
+    border-color: rgba(107,128,120,0.35);
+    color: var(--muted);
+  }
+  .tpz-pro-muted {
+    font-size: 0.71rem;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+  .tpz-pro-mini-btn {
+    border: 1px solid rgba(29,185,84,0.45);
+    background: rgba(29,185,84,0.07);
+    color: var(--g);
+    border-radius: 7px;
+    font-size: 0.64rem;
+    letter-spacing: 1.2px;
+    font-weight: 800;
+    padding: 6px 10px;
+    cursor: pointer;
+    text-transform: uppercase;
+  }
+  .tpz-pro-empty-state {
+    font-size: 0.78rem;
+    color: var(--muted);
+    line-height: 1.7;
+    text-align: center;
+    padding: 20px 10px;
+    border: 1px dashed rgba(255,255,255,0.12);
+    border-radius: 10px;
+    background: rgba(16,22,19,0.6);
+  }
+  .tpz-pro-recent-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .tpz-pro-recent-item {
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: var(--d4);
+    padding: 9px 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+  .tpz-pro-recent-title {
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 2px;
+  }
+  .tpz-pro-recent-meta {
+    font-size: 0.67rem;
+    color: var(--text-dim);
+  }
+  .tpz-pro-result-chip {
+    border-radius: 100px;
+    padding: 4px 10px;
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 1.1px;
+    border: 1px solid transparent;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .tpz-pro-result-chip.won {
+    background: rgba(29,185,84,0.14);
+    color: var(--g);
+    border-color: rgba(29,185,84,0.35);
+  }
+  .tpz-pro-result-chip.lost {
+    background: rgba(244,67,54,0.14);
+    color: #f44336;
+    border-color: rgba(244,67,54,0.35);
+  }
+  .tpz-pro-result-chip.push {
+    background: rgba(245,197,66,0.14);
+    color: var(--gold);
+    border-color: rgba(245,197,66,0.35);
+  }
+  .tpz-pro-result-chip.pending {
+    background: rgba(107,128,120,0.14);
+    color: var(--muted);
+    border-color: rgba(107,128,120,0.35);
+  }
   @media (max-width: 900px) {
     .tpz-proof-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
     .tpz-hero-glow { width: 330px; height: 330px; right: -110px; top: 8%; }
     .tpz-market-kpis,
     .tpz-rankings-summary-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .tpz-pro-kpi-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
+    .tpz-pro-insights-grid { grid-template-columns: 1fr; }
     .tpz-nav {
       padding: calc(10px + env(safe-area-inset-top)) 12px 10px !important;
       flex-direction: column;
@@ -640,6 +936,10 @@ const G = `
     .tpz-how-grid,
     .tpz-highlight-grid { grid-template-columns: 1fr; }
     .tpz-landing-cta-actions button { width: 100%; }
+    .tpz-pro-kpi-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .tpz-pro-cta-row button { width: 100%; }
+    .tpz-pro-card-head { flex-direction: column; align-items: flex-start; }
+    .tpz-pro-recent-item { flex-direction: column; align-items: flex-start; }
   }
   @media (max-width: 768px) {
     .tpz-page,
@@ -674,6 +974,7 @@ const G = `
     .tpz-nav-user-actions button { min-height: 34px !important; padding: 6px 9px !important; font-size: 0.64rem !important; }
     .tpz-nav-user-actions button:last-child { flex: 1 1 100%; }
     .tpz-stats-grid > div { min-width: 100% !important; flex: 1 1 100% !important; }
+    .tpz-pro-kpi-grid { grid-template-columns: 1fr; }
   }
   @keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:none; } }
   @keyframes popIn { from { opacity:0; transform:scale(0.95); } to { opacity:1; transform:scale(1); } }
@@ -776,32 +1077,32 @@ function getPickShareText(pick) {
   const oddsText = Number.isFinite(oddsValue) && oddsValue > 0 ? ` · Momio ${oddsValue.toFixed(2)}` : "";
   const bankValue = Number(pick?.bank);
   const bankText = Number.isFinite(bankValue) && bankValue > 0 ? ` · Bank ${bankValue}%` : "";
-  return `🔥 ${matchText}${tipsterText}${oddsText}${bankText} en The Pick Zone`;
+  return `${matchText}${tipsterText}${oddsText}${bankText} en The Pick Zone`;
 }
 
 const SOCIAL_SHARE_NETWORKS = [
   {
     key: "x",
     label: "X",
-    icon: "𝕏",
+    icon: "X",
     buildUrl: ({ url, text }) => `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`
   },
   {
     key: "facebook",
     label: "Facebook",
-    icon: "f",
+    icon: "FB",
     buildUrl: ({ url }) => `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`
   },
   {
     key: "whatsapp",
     label: "WhatsApp",
-    icon: "🟢",
+    icon: "WA",
     buildUrl: ({ url, text }) => `https://wa.me/?text=${encodeURIComponent(`${text} ${url}`)}`
   },
   {
     key: "telegram",
     label: "Telegram",
-    icon: "✈️",
+    icon: "TG",
     buildUrl: ({ url, text }) => `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`
   }
 ];
@@ -901,6 +1202,7 @@ async function createPickSharePreviewImage(pick) {
   const priceValue = toSafeNumber(pick?.price, 0);
   const priceText = priceValue <= 0 ? "GRATIS" : `$${priceValue.toFixed(2)} USD`;
   const timeText = sanitizeShareText(getPickShareTime(pick), "Hora por confirmar", 48);
+  const shareSportLabel = sanitizeShareText(getPickBetTypeLabel(pick), "Pick", 24);
 
   const bgGradient = ctx.createLinearGradient(0, 0, width, height);
   bgGradient.addColorStop(0, "#07110d");
@@ -961,7 +1263,7 @@ async function createPickSharePreviewImage(pick) {
 
   ctx.fillStyle = "rgba(255,255,255,0.78)";
   ctx.font = "700 30px DM Sans, sans-serif";
-  ctx.fillText(`${pick?.sport || "🏅"} ${leagueText}`, 98, currentY + 34);
+  ctx.fillText(`${shareSportLabel} · ${leagueText}`, 98, currentY + 34);
   ctx.fillText("Información previa del evento", 98, currentY + 84);
   ctx.fillText(timeText, 98, currentY + 134);
 
@@ -1389,7 +1691,7 @@ function PickSharePreviewModal({ pick, open, onClose, onDownloadImage }) {
             Cerrar
           </button>
           <button onClick={handleDownloadPreview} disabled={renderingPreview || !previewDataUrl || downloadingPreview} style={{background:"var(--g)",color:"#000",border:"none",padding:"10px 16px",borderRadius:8,cursor:"pointer",fontWeight:900,fontSize:"0.82rem"}}>
-            {downloadingPreview ? "Descargando..." : "⬇️ Descargar imagen TPZ"}
+            {downloadingPreview ? "Descargando..." : "Descargar imagen TPZ"}
           </button>
         </div>
       </div>
@@ -1438,10 +1740,10 @@ function PickShareButtons({ pick, compact = false, onDownloadImage }) {
     <>
       <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
         <button onClick={()=>setPreviewOpen(true)} title="Vista previa descargable" style={{...baseButtonStyle,padding:compact?"5px 8px":"7px 10px",fontSize:compact?"0.68rem":"0.75rem"}}>
-          🖼️
+          {compact ? "IMG" : "Imagen"}
         </button>
         <button onClick={handleNativeShare} style={{...baseButtonStyle,padding:compact?"5px 8px":"7px 10px",fontSize:compact?"0.68rem":"0.75rem"}}>
-          {sharingNative ? "..." : "📲"}
+          {sharingNative ? "..." : (compact ? "Comp" : "Compartir")}
         </button>
         {SOCIAL_SHARE_NETWORKS.map((network)=>(
           <button
@@ -1454,7 +1756,7 @@ function PickShareButtons({ pick, compact = false, onDownloadImage }) {
           </button>
         ))}
         <button onClick={handleCopyLink} style={{...baseButtonStyle,padding:compact?"5px 8px":"7px 10px",fontSize:compact?"0.68rem":"0.75rem"}}>
-          {copied ? "✅" : "🔗"}
+          {copied ? "OK" : (compact ? "Link" : "Copiar link")}
         </button>
       </div>
       <PickSharePreviewModal
@@ -1774,6 +2076,8 @@ function PickCard({ pick, setView, setPurchaseTarget, setSelectedTipster }) {
   const salesCount = Math.max(0, toSafeNumber(pick?.salesCount, 0));
   const teams = resolvePickTeams(pick);
   const hasTeamNames = teams.homeTeam && teams.awayTeam;
+  const betTypeLabel = getPickBetTypeLabel(pick);
+  const leagueLabel = String(pick?.league || "Liga");
 
   if (started) return null;
 
@@ -1783,7 +2087,7 @@ function PickCard({ pick, setView, setPurchaseTarget, setSelectedTipster }) {
       onMouseLeave={e=>e.currentTarget.style.borderColor="var(--border)"}>
       <div style={{padding:"13px 18px",borderBottom:"1px solid var(--border)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
         <span style={{background:"rgba(29,185,84,0.1)",border:"1px solid rgba(29,185,84,0.2)",color:"var(--g)",padding:"3px 10px",borderRadius:100,fontSize:"0.67rem",fontWeight:700}}>
-          {pick.sport} {pick.league}
+          {betTypeLabel} · {leagueLabel}
         </span>
         <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:2}}>
           <span style={{color:"var(--gold)",fontWeight:900,fontSize:"0.78rem"}}>MOMIO {pick.odds}</span>
@@ -1806,16 +2110,16 @@ function PickCard({ pick, setView, setPurchaseTarget, setSelectedTipster }) {
           )}
         </div>
         <div style={{background:"var(--d4)",borderRadius:8,padding:"10px",textAlign:"center",border:"1px dashed rgba(29,185,84,0.2)",marginBottom:14}}>
-          <span style={{fontSize:"0.65rem",color:"var(--muted)",letterSpacing:1.5,textTransform:"uppercase"}}>🔒 Contenido exclusivo</span>
+          <span style={{fontSize:"0.65rem",color:"var(--muted)",letterSpacing:1.5,textTransform:"uppercase"}}>Contenido exclusivo</span>
         </div>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap",marginBottom:12}}>
-          <span style={{fontSize:"0.68rem",color:"var(--muted)"}}>💰 {salesCount} ventas</span>
+          <span style={{fontSize:"0.68rem",color:"var(--muted)"}}>{salesCount} ventas</span>
           <PickShareButtons pick={pick} compact />
         </div>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div onClick={()=>{setSelectedTipster&&setSelectedTipster(pick.tipster);setView("tipster-profile");}} style={{fontSize:"0.82rem",fontWeight:700,cursor:"pointer",color:"var(--g)"}}>{pick.tipster}</div>
           <button onClick={()=>{setPurchaseTarget(pick);setView("purchase");}} style={{background:pick.price===0||pick.price==="0"?"#17a347":"var(--g)",color:"#000",border:"none",padding:"10px 20px",borderRadius:6,fontFamily:"'Barlow Condensed'",fontSize:"0.88rem",fontWeight:900,letterSpacing:1.5,cursor:"pointer"}}>
-            {pick.price===0||pick.price==="0"?"🎁 GRATIS":`$${pick.price} USD`}
+            {pick.price===0||pick.price==="0"?"GRATIS":`$${pick.price} USD`}
           </button>
         </div>
       </div>
@@ -1839,7 +2143,33 @@ function MarketplaceView({ setView, setPurchaseTarget, picks, setSelectedTipster
   const topSalesCount = Math.max(0, toSafeNumber(topSalesPick?.salesCount,0));
   return (
     <div className="tpz-page tpz-market-shell" style={{paddingTop:80,minHeight:"100vh",padding:"clamp(80px,12vw,100px) 5% 60px"}}>
-      <section className="tpz-market-hero">
+
+      <div className="tpz-market-head">
+        <h2 className="tpz-market-title">Picks disponibles ahora</h2>
+        <button
+          onClick={()=>setView("rankings")}
+          className="tpz-hero-secondary-btn"
+          style={{padding:"9px 14px",fontSize:"0.73rem"}}
+        >
+          Ver rankings
+        </button>
+      </div>
+      {available.length === 0 ? (
+        <div className="tpz-market-empty">
+          <strong>No hay picks disponibles por ahora</strong>
+          Vuelve en unos minutos para ver nuevas publicaciones premium de nuestros tipsters.
+        </div>
+      ) : (
+        <div style={{fontSize:"0.74rem",color:"var(--muted)",marginBottom:12}}>
+          {totalTipsters || 0} tipsters activos · {totalLeagues || 0} ligas disponibles
+        </div>
+      )}
+      {available.length > 0 && (
+        <div className="tpz-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:16}}>
+          {available.map((p,i)=><PickCard key={p._id||i} pick={p} setView={setView} setPurchaseTarget={setPurchaseTarget} setSelectedTipster={setSelectedTipster}/>)}
+        </div>
+      )}
+      <section className="tpz-market-hero" style={{marginTop:available.length>0?22:0}}>
         <div className="tpz-market-badge-row">
           <span className="tpz-market-badge">Mercado en vivo</span>
           <span className="tpz-market-badge">Picks verificados</span>
@@ -1849,7 +2179,7 @@ function MarketplaceView({ setView, setPurchaseTarget, picks, setSelectedTipster
           Marketplace de <span style={{color:"var(--g)"}}>Picks</span>
         </h1>
         <p className="tpz-market-hero-subtitle">
-          Encuentra picks premium con mejor contexto visual, métricas claras y acceso inmediato a los tickets más calientes del momento.
+          Métricas clave y contexto premium para monitorear el mercado sin perder de vista los picks activos.
         </p>
         <div className="tpz-market-kpis">
           <div className="tpz-market-kpi">
@@ -1872,7 +2202,7 @@ function MarketplaceView({ setView, setPurchaseTarget, picks, setSelectedTipster
         {topSalesPick && (
           <div className="tpz-market-highlight">
             <div>
-              <div className="tpz-market-highlight-title">🔥 Pick más vendido: {topSalesPick.match}</div>
+              <div className="tpz-market-highlight-title">Pick más vendido: {topSalesPick.match}</div>
               <div className="tpz-market-highlight-meta">
                 {topSalesPick.tipster} · {topSalesCount} ventas · Momio {formatOddsValue(topSalesPick.odds)} · Bank {Math.round(Math.max(0,toSafeNumber(topSalesPick.bank,0)))}%
               </div>
@@ -1887,32 +2217,6 @@ function MarketplaceView({ setView, setPurchaseTarget, picks, setSelectedTipster
           </div>
         )}
       </section>
-
-      <div className="tpz-market-head">
-        <h2 className="tpz-market-title">Picks disponibles ahora</h2>
-        <button
-          onClick={()=>setView("rankings")}
-          className="tpz-hero-secondary-btn"
-          style={{padding:"9px 14px",fontSize:"0.73rem"}}
-        >
-          Ver rankings
-        </button>
-      </div>
-      {available.length === 0 ? (
-        <div className="tpz-market-empty">
-          <strong>📭 No hay picks disponibles por ahora</strong>
-          Vuelve en unos minutos para ver nuevas publicaciones premium de nuestros tipsters.
-        </div>
-      ) : (
-        <div style={{fontSize:"0.74rem",color:"var(--muted)",marginBottom:12}}>
-          {totalTipsters || 0} tipsters activos · {totalLeagues || 0} ligas disponibles
-        </div>
-      )}
-      {available.length > 0 && (
-        <div className="tpz-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:16}}>
-          {available.map((p,i)=><PickCard key={p._id||i} pick={p} setView={setView} setPurchaseTarget={setPurchaseTarget} setSelectedTipster={setSelectedTipster}/>)}
-        </div>
-      )}
     </div>
   );
 }
@@ -2132,11 +2436,11 @@ function PurchaseView({ pick, setView, user }) {
   if (step === 2) return (
     <div className="tpz-centered-page" style={{paddingTop:80,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:"clamp(80px,12vw,100px) 5% 60px"}}>
       <div className="tpz-purchase-card" style={{maxWidth:440,width:"100%",animation:"popIn .4s ease",textAlign:"center"}}>
-        <div style={{width:64,height:64,borderRadius:"50%",background:"rgba(29,185,84,0.15)",border:"2px solid var(--g)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 20px",fontSize:"1.8rem"}}>✅</div>
+        <div style={{width:64,height:64,borderRadius:"50%",background:"rgba(29,185,84,0.15)",border:"2px solid var(--g)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 20px",fontSize:"1rem",fontWeight:900,color:"var(--g)",letterSpacing:1}}>OK</div>
         <h2 style={{fontFamily:"'Bebas Neue'",fontSize:"2rem",color:"var(--g)",marginBottom:8}}>¡Pick Desbloqueado!</h2>
         <p style={{color:"var(--muted)",marginBottom:24}}>{unlockedPick?.match||activePick.match}</p>
         <div className="tpz-protected-content" style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:12,padding:20,marginBottom:20,textAlign:"left"}}>
-          <div style={{fontSize:"0.7rem",color:"var(--g)",letterSpacing:2,fontWeight:700,marginBottom:12}}>🔓 CONTENIDO DESBLOQUEADO</div>
+          <div style={{fontSize:"0.7rem",color:"var(--g)",letterSpacing:2,fontWeight:700,marginBottom:12}}>CONTENIDO DESBLOQUEADO</div>
           {unlockedPick?.ticketImg ? (
             <img src={unlockedPick.ticketImg} alt="Ticket" style={{width:"100%",borderRadius:8}}/>
           ) : (
@@ -2147,7 +2451,7 @@ function PurchaseView({ pick, setView, user }) {
         <div style={{display:"flex",justifyContent:"center",marginBottom:12}}>
           <PickShareButtons pick={unlockedPick||activePick} onDownloadImage={handleTrackShareDownload} />
         </div>
-        <div style={{fontSize:"0.72rem",color:"var(--muted)",marginBottom:14}}>⬇️ Descargado {downloadCount} veces · usa 🖼️ para descargar imagen con marca de agua</div>
+        <div style={{fontSize:"0.72rem",color:"var(--muted)",marginBottom:14}}>Descargado {downloadCount} veces · usa Imagen para descargar con marca de agua</div>
         <button onClick={()=>setView("marketplace")} style={{background:"var(--g)",color:"#000",border:"none",padding:"13px 28px",borderRadius:8,fontFamily:"'Barlow Condensed'",fontSize:"1rem",fontWeight:900,letterSpacing:2,cursor:"pointer"}}>
           VER MÁS PICKS
         </button>
@@ -2160,7 +2464,7 @@ function PurchaseView({ pick, setView, user }) {
       <div className="tpz-purchase-card" style={{maxWidth:440,width:"100%",animation:"popIn .4s ease"}}>
         <div style={{background:"var(--d2)",border:"1px solid rgba(29,185,84,0.3)",borderRadius:20,overflow:"hidden"}}>
           <div style={{padding:"20px 24px",textAlign:"center",borderBottom:"1px solid var(--border)"}}>
-            <div style={{fontSize:"0.68rem",color:"var(--g)",letterSpacing:3,textTransform:"uppercase",fontWeight:700,marginBottom:8}}>🔥 PICK EXCLUSIVO 🔒</div>
+            <div style={{fontSize:"0.68rem",color:"var(--g)",letterSpacing:3,textTransform:"uppercase",fontWeight:700,marginBottom:8}}>PICK EXCLUSIVO</div>
             <div style={{fontFamily:"'Bebas Neue'",fontSize:"1.4rem"}}>{activePick.match}</div>
             <div style={{fontSize:"0.75rem",color:"var(--muted)",marginTop:4}}>{timeDisplay} · {activePick.league}</div>
           </div>
@@ -2174,7 +2478,7 @@ function PurchaseView({ pick, setView, user }) {
           </div>
           <div style={{padding:"20px 24px",borderBottom:"1px solid var(--border)"}}>
             <div style={{background:"var(--d4)",borderRadius:8,padding:"20px",textAlign:"center",border:"1px dashed rgba(29,185,84,0.2)"}}>
-              <span style={{fontSize:"1.5rem"}}>🔒</span>
+              <span style={{fontSize:"1rem",fontWeight:900,color:"var(--g)",letterSpacing:1}}>TPZ</span>
               <div style={{fontSize:"0.65rem",color:"var(--muted)",letterSpacing:1.5,marginTop:6}}>CONTENIDO EXCLUSIVO</div>
             </div>
           </div>
@@ -2188,9 +2492,9 @@ function PurchaseView({ pick, setView, user }) {
           <div style={{padding:20}}>
             {error && <div style={{background:"rgba(244,67,54,0.1)",border:"1px solid #f44336",color:"#f44336",padding:"8px 12px",borderRadius:6,marginBottom:12,fontSize:"0.8rem"}}>{error}</div>}
             <button onClick={handleBuy} disabled={paying} style={{width:"100%",background:paying?"var(--d4)":"var(--g)",color:paying?"var(--muted)":"#000",border:"none",padding:15,borderRadius:8,fontFamily:"'Barlow Condensed'",fontSize:"1.1rem",fontWeight:900,letterSpacing:2,cursor:"pointer"}}>
-              {paying?"Procesando...":activePick.price===0||activePick.price==="0"?"🎁 OBTENER GRATIS":"💳 PAGAR CON STRIPE - $"+activePick.price+" USD"}
+              {paying?"Procesando...":activePick.price===0||activePick.price==="0"?"OBTENER GRATIS":"PAGAR CON STRIPE - $"+activePick.price+" USD"}
             </button>
-            <div style={{textAlign:"center",fontSize:"0.72rem",color:"var(--muted)",marginTop:10}}>🔒 Pago seguro · Acceso inmediato</div>
+            <div style={{textAlign:"center",fontSize:"0.72rem",color:"var(--muted)",marginTop:10}}>Pago seguro · Acceso inmediato</div>
           </div>
         </div>
         <button onClick={()=>setView("marketplace")} style={{background:"none",border:"none",color:"var(--muted)",fontSize:"0.8rem",cursor:"pointer",marginTop:16,display:"block",textAlign:"center",width:"100%"}}>← Volver al marketplace</button>
@@ -2954,19 +3258,69 @@ function ProPanelView({ user, addPick, setView, picks }) {
   const [propStatType, setPropStatType] = useState("points");
   const [bookmaker, setBookmaker] = useState("");
 
-  const myPicks = picks.filter(p=>p.tipster===user?.name);
-  const wonPicks = myPicks.filter(p=>p.result==="won");
-  const lostPicks = myPicks.filter(p=>p.result==="lost");
+  const myPicks = picks.filter((p)=>p.tipster===user?.name);
+  const wonPicks = myPicks.filter((p)=>String(p?.result || "").toLowerCase()==="won");
+  const lostPicks = myPicks.filter((p)=>String(p?.result || "").toLowerCase()==="lost");
+  const pushPicks = myPicks.filter((p)=>String(p?.result || "").toLowerCase()==="void");
+  const resolvedPicks = myPicks.filter((p)=>["won","lost","void"].includes(String(p?.result || "").toLowerCase()));
+  const pendingResultPicks = myPicks.filter((p)=>!["won","lost","void"].includes(String(p?.result || "").toLowerCase()));
   const winRate = wonPicks.length+lostPicks.length > 0 ? Math.round((wonPicks.length/(wonPicks.length+lostPicks.length))*100) : 0;
 
   const PICK_COUNTER_VERSION = "20260511_reset_1";
   const todayKey = "tpz_picks_today_"+PICK_COUNTER_VERSION+"_"+new Date().toDateString();
   const todayCount = parseInt(localStorage.getItem(todayKey)||"0");
   const remaining = Math.max(0, 3-todayCount);
+  const dailyUsagePercent = Math.max(0, Math.min(100, Math.round((todayCount/3)*100)));
+  const averageOdds = resolvedPicks.length>0
+    ? resolvedPicks.reduce((sum,p)=>sum + toSafeNumber(p?.odds,0),0) / resolvedPicks.length
+    : 0;
+  const averageBank = myPicks.length>0
+    ? myPicks.reduce((sum,p)=>sum + Math.max(0,toSafeNumber(p?.bank,0)),0) / myPicks.length
+    : 0;
+  const paidPicks = myPicks.filter((p)=>toSafeNumber(p?.price,0)>0).length;
+  const freePicks = Math.max(0, myPicks.length-paidPicks);
+  const recentPicks = [...myPicks]
+    .sort((a,b)=>{
+      const timeA = new Date(a?.createdAt || a?.updatedAt || a?.timeRaw || a?.time || 0).getTime();
+      const timeB = new Date(b?.createdAt || b?.updatedAt || b?.timeRaw || b?.time || 0).getTime();
+      return timeB - timeA;
+    })
+    .slice(0,5);
+  const trendResolved = [...resolvedPicks]
+    .sort((a,b)=>new Date(b?.createdAt || b?.updatedAt || 0).getTime() - new Date(a?.createdAt || a?.updatedAt || 0).getTime())
+    .slice(0,8);
+  const trendWins = trendResolved.filter((pick)=>String(pick?.result || "").toLowerCase()==="won").length;
+  const trendWinRate = trendResolved.length>0 ? Math.round((trendWins/trendResolved.length)*100) : 0;
+  const roiDisplay = typeof user?.roi === "string" && String(user?.roi || "").trim()
+    ? user.roi
+    : formatSignedPercent(toSafeNumber(user?.roiValue,0));
   const currentSportKey = match?.sportKey || league?.key || "";
   const propStatOptions = getPropStatOptionsForSportKey(currentSportKey);
-  const selectedPropStat = propStatOptions.find((item)=>item.value===propStatType) || null;
   const propStatRequiresPlayer = doesPropStatRequirePlayer(propStatType, currentSportKey);
+  const kpiCards = [
+    { icon:"📊", value: roiDisplay, label:"ROI Tipster", meta:`${resolvedPicks.length} picks resueltos` },
+    { icon:"🎯", value:`${winRate}%`, label:"Win Rate", meta:`${wonPicks.length}W · ${lostPicks.length}L` },
+    { icon:"📈", value:myPicks.length, label:"Picks Totales", meta:`${freePicks} free · ${paidPicks} premium` },
+    { icon:"🧮", value:formatOddsValue(averageOdds), label:"Momio Prom.", meta:`Bank prom. ${Math.round(averageBank)}%` },
+    { icon:"🏁", value:`${wonPicks.length}-${lostPicks.length}-${pushPicks.length}`, label:"Record W-L-P", meta:`Pendientes ${pendingResultPicks.length}` },
+    { icon:"⚡", value:`${remaining}/3`, label:"Cupo Diario", meta:`${todayCount} publicados hoy` },
+  ];
+
+  function getResultChipClass(resultValue) {
+    const normalized = String(resultValue || "pending").toLowerCase();
+    if (normalized === "won") return "won";
+    if (normalized === "lost") return "lost";
+    if (normalized === "void") return "push";
+    return "pending";
+  }
+
+  function getResultChipLabel(resultValue) {
+    const normalized = String(resultValue || "pending").toLowerCase();
+    if (normalized === "won") return "Ganado";
+    if (normalized === "lost") return "Perdido";
+    if (normalized === "void") return "Push";
+    return "Pendiente";
+  }
 
   const mainLeagues = MAIN_LEAGUE_KEYS_ORDER.map((key, idx)=>{
     const existing = oddsSports.find((leagueItem)=>leagueItem.key===key);
@@ -3417,31 +3771,108 @@ function ProPanelView({ user, addPick, setView, picks }) {
   );
 
   if(screen==="dashboard") return (
-    <div className="tpz-page" style={{paddingTop:80,minHeight:"100vh",padding:"clamp(80px,12vw,100px) 5% 60px"}}>
-      <div style={{maxWidth:700,margin:"0 auto"}}>
-        <div style={{marginBottom:28}}>
-          <div style={{fontSize:"0.68rem",color:"var(--g)",letterSpacing:3,textTransform:"uppercase",fontWeight:700,marginBottom:8}}>Panel Pro</div>
-          <h1 style={{fontFamily:"'Bebas Neue'",fontSize:"clamp(2rem,5vw,3rem)"}}>Bienvenido, <span style={{color:"var(--g)"}}>{user?.name}</span></h1>
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:12,marginBottom:28}}>
-          {[["📊",user?.roi||"+0%","ROI"],["🎯",winRate+"%","Win Rate"],["📈",myPicks.length,"Picks totales"],["🎟️",remaining+"/3","Picks hoy"]].map(([ic,v,l])=>(
-            <div key={l} style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:"18px 16px",textAlign:"center"}}>
-              <div style={{fontSize:"1.4rem",marginBottom:6}}>{ic}</div>
-              <div style={{fontFamily:"'Bebas Neue'",fontSize:"1.8rem",color:"var(--g)",lineHeight:1}}>{v}</div>
-              <div style={{fontSize:"0.65rem",color:"var(--muted)",letterSpacing:1,marginTop:4}}>{l}</div>
+    <div className="tpz-page tpz-pro-shell" style={{paddingTop:80,minHeight:"100vh",padding:"clamp(80px,12vw,100px) 5% 60px"}}>
+      <div className="tpz-pro-shell-inner">
+        <section className="tpz-pro-hero">
+          <div className="tpz-pro-hero-badges">
+            <span className="tpz-pro-hero-badge">Panel Pro</span>
+            <span className="tpz-pro-hero-badge">{remaining>0 ? `${remaining} picks disponibles hoy` : "Límite diario alcanzado"}</span>
+            <span className="tpz-pro-hero-badge">{sportsHydratedFromApi ? "Odds en vivo conectadas" : "Odds base disponibles"}</span>
+          </div>
+          <h1 className="tpz-pro-hero-title">Bienvenido, <span>{user?.name||"Tipster"}</span></h1>
+          <p className="tpz-pro-hero-subtitle">
+            Gestiona tu operación premium desde una sola vista: publica más rápido, monitorea desempeño real y detecta en minutos qué mercados te están funcionando mejor.
+          </p>
+          <div className="tpz-pro-cta-row">
+            <button className="tpz-pro-primary-btn" onClick={startFlow} disabled={remaining<=0}>
+              {remaining<=0 ? "LÍMITE DIARIO COMPLETADO" : "+ CREAR APUESTA"}
+            </button>
+            <button className="tpz-pro-secondary-btn" onClick={()=>setView("marketplace")}>Ver marketplace</button>
+          </div>
+        </section>
+
+        <section className="tpz-pro-kpi-grid">
+          {kpiCards.map((item)=>(
+            <div key={item.label} className="tpz-pro-kpi-card">
+              <div className="tpz-pro-kpi-icon">{item.icon}</div>
+              <div className="tpz-pro-kpi-value">{item.value}</div>
+              <div className="tpz-pro-kpi-label">{item.label}</div>
+              <div className="tpz-pro-kpi-meta">{item.meta}</div>
             </div>
           ))}
-        </div>
-        <button onClick={startFlow} disabled={remaining<=0} style={{background:remaining<=0?"var(--d4)":"var(--g)",color:remaining<=0?"var(--muted)":"#000",border:"none",padding:"16px 36px",borderRadius:8,fontFamily:"'Barlow Condensed'",fontSize:"1.1rem",fontWeight:900,letterSpacing:2,cursor:remaining<=0?"not-allowed":"pointer"}}>
-          {remaining<=0?"LÍMITE ALCANZADO HOY":"+ CREAR APUESTA"}
-        </button>
+        </section>
+
+        <section className="tpz-pro-insights-grid">
+          <article className="tpz-pro-panel-card">
+            <div className="tpz-pro-card-head">
+              <h3>Ritmo diario de publicación</h3>
+              <span>{todayCount}/3 usados</span>
+            </div>
+            <div className="tpz-pro-progress-row">
+              <strong style={{fontSize:"0.88rem",color:remaining>0?"var(--text)":"var(--gold)"}}>
+                {remaining>0 ? `${remaining} picks restantes hoy` : "Sin cupo disponible por hoy"}
+              </strong>
+              <span className="tpz-pro-progress-meta">{dailyUsagePercent}%</span>
+            </div>
+            <div className="tpz-pro-progress-track">
+              <span style={{width:`${dailyUsagePercent}%`}} />
+            </div>
+            <div className="tpz-pro-muted" style={{marginTop:8}}>
+              Publicar con consistencia mejora exposición en marketplace y acelera crecimiento en rankings.
+            </div>
+          </article>
+
+          <article className="tpz-pro-panel-card">
+            <div className="tpz-pro-card-head">
+              <h3>Registro verificado</h3>
+              <span>W/L/P</span>
+            </div>
+            <div className="tpz-pro-record-grid">
+              <div className="tpz-pro-record-pill won">WON {wonPicks.length}</div>
+              <div className="tpz-pro-record-pill lost">LOST {lostPicks.length}</div>
+              <div className="tpz-pro-record-pill push">PUSH {pushPicks.length}</div>
+              <div className="tpz-pro-record-pill pending">PEND {pendingResultPicks.length}</div>
+            </div>
+            <div className="tpz-pro-muted">
+              Últimos {trendResolved.length} resueltos: <span style={{color:trendWinRate>=50?"var(--g)":"var(--gold)",fontWeight:700}}>{trendWinRate}% de acierto</span> · momio promedio {formatOddsValue(averageOdds)}.
+            </div>
+          </article>
+        </section>
+
+        <section className="tpz-pro-panel-card">
+          <div className="tpz-pro-card-head">
+            <h3>Actividad reciente</h3>
+            <span>{recentPicks.length>0 ? `${recentPicks.length} picks` : "Sin actividad"}</span>
+          </div>
+          {recentPicks.length===0 ? (
+            <div className="tpz-pro-empty-state">
+              Publica tu primer pick premium para activar histórico visual y métricas de rendimiento.
+            </div>
+          ) : (
+            <div className="tpz-pro-recent-list">
+              {recentPicks.map((pick, idx)=>(
+                <div key={pick?._id || pick?.id || `${pick?.match || "pick"}-${idx}`} className="tpz-pro-recent-item">
+                  <div>
+                    <div className="tpz-pro-recent-title">{pick?.match || pick?.bet?.selection || "Pick publicado"}</div>
+                    <div className="tpz-pro-recent-meta">
+                      {pick?.league || "Liga"} · {String(pick?.betType||"").toLowerCase()==="parlay" ? "Parlay" : "Straight"} · Momio {formatOddsValue(pick?.odds)} · Bank {Math.max(0, Math.round(toSafeNumber(pick?.bank,0)))}% · {getPickShareTime(pick)}
+                    </div>
+                  </div>
+                  <span className={`tpz-pro-result-chip ${getResultChipClass(pick?.result)}`}>
+                    {getResultChipLabel(pick?.result)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
     </div>
   );
 
   if(screen==="bet-type") return (
-    <div className="tpz-page" style={{paddingTop:80,padding:"clamp(80px,12vw,100px) 5% 60px"}}>
-      <div style={{maxWidth:700,margin:"0 auto"}}>
+    <div className="tpz-page tpz-pro-shell" style={{paddingTop:80,padding:"clamp(80px,12vw,100px) 5% 60px"}}>
+      <div className="tpz-pro-shell-inner" style={{maxWidth:700}}>
         <button onClick={()=>setScreen("dashboard")} style={{background:"none",border:"none",color:"var(--g)",cursor:"pointer",fontSize:"0.85rem",marginBottom:20}}>← Volver</button>
         <div style={{fontSize:"0.68rem",color:"var(--g)",letterSpacing:3,textTransform:"uppercase",fontWeight:700,marginBottom:8}}>Nueva apuesta</div>
         <h2 style={{fontFamily:"'Bebas Neue'",fontSize:"2.5rem",marginBottom:20}}>Selecciona tipo de pick</h2>
@@ -3466,8 +3897,8 @@ function ProPanelView({ user, addPick, setView, picks }) {
   );
 
   if(screen==="straight-league") return (
-    <div className="tpz-page" style={{paddingTop:80,padding:"clamp(80px,12vw,100px) 5% 60px"}}>
-      <div style={{maxWidth:700,margin:"0 auto"}}>
+    <div className="tpz-page tpz-pro-shell" style={{paddingTop:80,padding:"clamp(80px,12vw,100px) 5% 60px"}}>
+      <div className="tpz-pro-shell-inner" style={{maxWidth:700}}>
         <button onClick={()=>setScreen("bet-type")} style={{background:"none",border:"none",color:"var(--g)",cursor:"pointer",fontSize:"0.85rem",marginBottom:20}}>← Tipo de apuesta</button>
         <div style={{fontSize:"0.68rem",color:"var(--g)",letterSpacing:3,textTransform:"uppercase",fontWeight:700,marginBottom:8}}>Straight · Paso 1 de 3</div>
         <h2 style={{fontFamily:"'Bebas Neue'",fontSize:"2.5rem",marginBottom:16}}>Selecciona la liga</h2>
@@ -3540,8 +3971,8 @@ function ProPanelView({ user, addPick, setView, picks }) {
   );
 
   if(screen==="straight-match") return (
-    <div className="tpz-page" style={{paddingTop:80,padding:"clamp(80px,12vw,100px) 5% 60px"}}>
-      <div style={{maxWidth:600,margin:"0 auto"}}>
+    <div className="tpz-page tpz-pro-shell" style={{paddingTop:80,padding:"clamp(80px,12vw,100px) 5% 60px"}}>
+      <div className="tpz-pro-shell-inner" style={{maxWidth:600}}>
         <button onClick={()=>{setMatch(null);setScreen("straight-league");}} style={{background:"none",border:"none",color:"var(--g)",cursor:"pointer",fontSize:"0.85rem",marginBottom:20}}>← Cambiar liga</button>
         <div style={{fontSize:"0.68rem",color:"var(--g)",letterSpacing:3,textTransform:"uppercase",fontWeight:700,marginBottom:8}}>Straight · Paso 2 de 3</div>
         <h2 style={{fontFamily:"'Bebas Neue'",fontSize:"2.5rem",marginBottom:8}}>Selecciona el partido</h2>
@@ -3592,8 +4023,8 @@ function ProPanelView({ user, addPick, setView, picks }) {
   );
 
   if(screen==="straight-config") return (
-    <div className="tpz-page" style={{paddingTop:80,padding:"clamp(80px,12vw,100px) 5% 60px"}}>
-      <div style={{maxWidth:500,margin:"0 auto"}}>
+    <div className="tpz-page tpz-pro-shell" style={{paddingTop:80,padding:"clamp(80px,12vw,100px) 5% 60px"}}>
+      <div className="tpz-pro-shell-inner" style={{maxWidth:500}}>
         <button onClick={()=>setScreen("straight-match")} style={{background:"none",border:"none",color:"var(--g)",cursor:"pointer",fontSize:"0.85rem",marginBottom:20}}>← Cambiar partido</button>
         <div style={{fontSize:"0.68rem",color:"var(--g)",letterSpacing:3,textTransform:"uppercase",fontWeight:700,marginBottom:8}}>Straight · Paso 3 de 3</div>
         <h2 style={{fontFamily:"'Bebas Neue'",fontSize:"2.5rem",marginBottom:24}}>Configura tu pick</h2>
@@ -3695,8 +4126,8 @@ function ProPanelView({ user, addPick, setView, picks }) {
   );
 
   if(screen==="parlay-config") return (
-    <div className="tpz-page" style={{paddingTop:80,padding:"clamp(80px,12vw,100px) 5% 60px"}}>
-      <div style={{maxWidth:500,margin:"0 auto"}}>
+    <div className="tpz-page tpz-pro-shell" style={{paddingTop:80,padding:"clamp(80px,12vw,100px) 5% 60px"}}>
+      <div className="tpz-pro-shell-inner" style={{maxWidth:500}}>
         <button onClick={()=>setScreen("bet-type")} style={{background:"none",border:"none",color:"var(--g)",cursor:"pointer",fontSize:"0.85rem",marginBottom:20}}>← Tipo de apuesta</button>
         <div style={{fontSize:"0.68rem",color:"var(--g)",letterSpacing:3,textTransform:"uppercase",fontWeight:700,marginBottom:8}}>Parlay</div>
         <h2 style={{fontFamily:"'Bebas Neue'",fontSize:"2.5rem",marginBottom:24}}>Configura tu parlay</h2>
@@ -3776,7 +4207,7 @@ function ProPanelView({ user, addPick, setView, picks }) {
   );
 
   if(screen==="published") return (
-    <div className="tpz-centered-page" style={{paddingTop:80,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:"clamp(80px,12vw,100px) 5% 60px",textAlign:"center"}}>
+    <div className="tpz-centered-page tpz-pro-shell" style={{paddingTop:80,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:"clamp(80px,12vw,100px) 5% 60px",textAlign:"center"}}>
       <div style={{maxWidth:500,margin:"0 auto",animation:"popIn .5s ease"}}>
         <div style={{width:80,height:80,borderRadius:"50%",background:"rgba(29,185,84,0.15)",border:"2px solid var(--g)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 24px",fontSize:"2rem"}}>✅</div>
         <h2 style={{fontFamily:"'Bebas Neue'",fontSize:"3rem",color:"var(--g)",marginBottom:8}}>{publishedMeta?.title||"Pick Publicado!"}</h2>
@@ -4904,6 +5335,13 @@ function TipsterProfileView({ setView, tipsterName, picks }) {
   },[tipsterName]);
 
   const myPicks = picks.filter(p=>p.tipster===tipsterName);
+  const recentPicks = [...myPicks]
+    .sort((a,b)=>{
+      const timeA = new Date(a?.createdAt || a?.updatedAt || a?.timeRaw || a?.time || 0).getTime();
+      const timeB = new Date(b?.createdAt || b?.updatedAt || b?.timeRaw || b?.time || 0).getTime();
+      return timeB - timeA;
+    })
+    .slice(0,12);
   const localWon = myPicks.filter(p=>p.result==="won").length;
   const localLost = myPicks.filter(p=>p.result==="lost").length;
   const localPush = myPicks.filter(p=>p.result==="void").length;
@@ -4925,56 +5363,184 @@ function TipsterProfileView({ setView, tipsterName, picks }) {
   const roiText = typeof tipster?.roi === "string" && tipster.roi ? tipster.roi : formatSignedPercent(roiValue);
   const yieldText = typeof tipster?.yield === "string" && tipster.yield ? tipster.yield : formatSignedPercent(yieldValue);
   const riskedUnits = toSafeNumber(tipster?.totalRiskedUnits, 0);
+  const pendingPicks = Math.max(0, totalPicks - (won + lost + push));
+  const recentResolvedWindow = recentPicks.filter((pick)=>["won","lost","void"].includes(String(pick?.result||"").toLowerCase())).slice(0,8);
+  const recentWindowWins = recentResolvedWindow.filter((pick)=>String(pick?.result||"").toLowerCase()==="won").length;
+  const recentWindowRate = recentResolvedWindow.length>0 ? Math.round((recentWindowWins/recentResolvedWindow.length)*100) : 0;
+  const profileSubtitle = tipster?.bio || "Tipster verificado con historial y rendimiento en tiempo real.";
+  const positiveRoi = !String(roiText||"").trim().startsWith("-");
+  const positiveYield = !String(yieldText||"").trim().startsWith("-");
+  const positiveNet = netUnits >= 0;
+  const headlineCards = [
+    {
+      key: "roi",
+      label: "ROI",
+      value: roiText || "+0.0%",
+      caption: "retorno acumulado",
+      positive: positiveRoi
+    },
+    {
+      key: "yield",
+      label: "Yield",
+      value: yieldText || "+0.0%",
+      caption: "eficiencia por apuesta",
+      positive: positiveYield
+    },
+    {
+      key: "net",
+      label: "Neto u",
+      value: formatSignedUnits(netUnits),
+      caption: "unidades netas",
+      positive: positiveNet
+    }
+  ];
+  const detailCards = [
+    { key:"record", label:"Record", value:`${won}-${lost}-${push}`, caption:"W-L-P", icon:"🏁" },
+    { key:"winrate", label:"Win Rate", value:`${winRate}%`, caption:`${decisive} decisiones`, icon:"🎯" },
+    { key:"momio", label:"Momio prom", value:formatOddsValue(avgOdds), caption:"picks resueltos", icon:"📈" },
+    { key:"push", label:"Push", value:String(push), caption:"void/push oficiales", icon:"🟨" },
+    { key:"total", label:"Picks totales", value:String(totalPicks), caption:`${pendingPicks} pendientes`, icon:"📊" },
+    { key:"risk", label:"Riesgo u", value:`${riskedUnits.toFixed(2)}u`, caption:"exposición acumulada", icon:"💼" }
+  ];
+
+  function getPickResultMeta(resultValue) {
+    const normalized = String(resultValue || "").toLowerCase();
+    if (normalized === "won") {
+      return {
+        label: "GANADO",
+        color: "var(--g)",
+        bg: "rgba(29,185,84,0.14)",
+        border: "1px solid rgba(29,185,84,0.35)",
+        accent: "var(--g)"
+      };
+    }
+    if (normalized === "lost") {
+      return {
+        label: "PERDIDO",
+        color: "#f44336",
+        bg: "rgba(244,67,54,0.14)",
+        border: "1px solid rgba(244,67,54,0.35)",
+        accent: "#f44336"
+      };
+    }
+    if (normalized === "void") {
+      return {
+        label: "PUSH",
+        color: "var(--gold)",
+        bg: "rgba(245,197,66,0.14)",
+        border: "1px solid rgba(245,197,66,0.35)",
+        accent: "var(--gold)"
+      };
+    }
+    return {
+      label: "PENDIENTE",
+      color: "var(--muted)",
+      bg: "rgba(107,128,120,0.14)",
+      border: "1px solid rgba(107,128,120,0.35)",
+      accent: "var(--muted)"
+    };
+  }
 
   return (
-    <div className="tpz-page" style={{paddingTop:80,minHeight:"100vh",padding:"clamp(80px,12vw,100px) 5% 60px"}}>
-      <div style={{maxWidth:600,margin:"0 auto"}}>
-        <button onClick={()=>setView("rankings")} style={{background:"none",border:"none",color:"var(--g)",cursor:"pointer",fontSize:"0.85rem",marginBottom:20}}>← Volver</button>
-        <div style={{background:"var(--d2)",border:"1px solid var(--border)",borderRadius:16,padding:24,marginBottom:20}}>
-          <div style={{display:"flex",alignItems:"center",gap:20,flexWrap:"wrap",marginBottom:20}}>
-            <div style={{width:80,height:80,borderRadius:"50%",background:"var(--d4)",border:"3px solid var(--g)",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",flexShrink:0}}>
-              {tipster?.avatar?<img src={tipster.avatar} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<span style={{fontFamily:"'Bebas Neue'",fontSize:"2rem",color:"var(--g)"}}>{(tipsterName||"T")[0].toUpperCase()}</span>}
+    <div className="tpz-page tpz-pro-shell" style={{paddingTop:80,minHeight:"100vh",padding:"clamp(80px,12vw,100px) 5% 60px"}}>
+      <div className="tpz-pro-shell-inner" style={{maxWidth:920}}>
+        <button onClick={()=>setView("rankings")} style={{background:"none",border:"none",color:"var(--g)",cursor:"pointer",fontSize:"0.85rem"}}>← Volver</button>
+
+        <section className="tpz-pro-hero">
+          <div className="tpz-two-col-grid" style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(230px,0.5fr)",gap:14,alignItems:"stretch"}}>
+            <div style={{display:"flex",alignItems:"center",gap:16,flexWrap:"wrap"}}>
+              <div style={{width:98,height:98,borderRadius:"50%",background:"var(--d4)",border:"4px solid var(--g)",display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",flexShrink:0,boxShadow:"0 12px 30px rgba(29,185,84,0.2)"}}>
+                {tipster?.avatar?<img src={tipster.avatar} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<span style={{fontFamily:"'Bebas Neue'",fontSize:"2.4rem",color:"var(--g)"}}>{(tipsterName||"T")[0].toUpperCase()}</span>}
+              </div>
+              <div style={{flex:1,minWidth:220}}>
+                <h2 style={{fontFamily:"'Bebas Neue'",fontSize:"clamp(2rem,4.8vw,3rem)",lineHeight:0.9,letterSpacing:1.2,marginBottom:8}}>{tipsterName}</h2>
+                <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:10}}>
+                  <span style={{background:"rgba(29,185,84,0.15)",color:"var(--g)",padding:"4px 12px",borderRadius:100,fontSize:"0.69rem",fontWeight:800,letterSpacing:1.2}}>PRO ⭐ VERIFICADO</span>
+                  <span style={{background:"rgba(245,197,66,0.14)",color:"var(--gold)",padding:"4px 12px",borderRadius:100,fontSize:"0.69rem",fontWeight:800,letterSpacing:1.2}}>MOMIO + PUSH TRACKING</span>
+                </div>
+                <div style={{fontSize:"0.86rem",color:"var(--text-dim)",lineHeight:1.7,maxWidth:620}}>{profileSubtitle}</div>
+              </div>
             </div>
-            <div>
-              <h2 style={{fontSize:"1.4rem",fontWeight:700,marginBottom:4}}>{tipsterName}</h2>
-              <span style={{background:"rgba(29,185,84,0.15)",color:"var(--g)",padding:"3px 12px",borderRadius:100,fontSize:"0.72rem",fontWeight:700}}>PRO ⭐ VERIFICADO</span>
-              {tipster?.bio&&<div style={{fontSize:"0.82rem",color:"var(--muted)",marginTop:8}}>{tipster.bio}</div>}
+            <div style={{background:"rgba(7,17,13,0.85)",border:"1px solid rgba(29,185,84,0.28)",borderRadius:12,padding:"12px 14px",display:"flex",flexDirection:"column",justifyContent:"space-between"}}>
+              <div>
+                <div style={{fontSize:"0.63rem",letterSpacing:1.3,textTransform:"uppercase",color:"var(--muted)",marginBottom:6}}>Pulso reciente</div>
+                <div style={{fontFamily:"'Bebas Neue'",fontSize:"2rem",lineHeight:1,color:recentWindowRate>=50?"var(--g)":"var(--gold)"}}>
+                  {recentResolvedWindow.length>0 ? `${recentWindowRate}%` : "--"}
+                </div>
+                <div style={{fontSize:"0.72rem",color:"var(--text-dim)",marginTop:4}}>
+                  {recentResolvedWindow.length>0 ? `${recentWindowWins}/${recentResolvedWindow.length} aciertos en los últimos resueltos` : "Sin ventana de resultados aún"}
+                </div>
+              </div>
+              <div style={{fontSize:"0.72rem",color:"var(--muted)",marginTop:10}}>
+                Record general: <span style={{color:"var(--text)",fontWeight:700}}>{won}-{lost}-{push}</span>
+              </div>
             </div>
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:12}}>
-            {[
-              [roiText||"+0%","ROI"],
-              [yieldText||"+0%","YIELD"],
-              [formatSignedUnits(netUnits),"Neto u"],
-              [winRate+"%","Win Rate"],
-              [formatOddsValue(avgOdds),"Momio prom"],
-              [totalPicks,"Picks totales"],
-              [won,"Ganados"],
-              [lost,"Perdidos"],
-              [push,"Void"],
-              [riskedUnits.toFixed(2)+"u","Riesgo u"]
-            ].map(([v,l])=>(
-              <div key={l} style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:"14px 12px",textAlign:"center"}}>
-                <div style={{fontFamily:"'Bebas Neue'",fontSize:"1.6rem",color:(l==="ROI"||l==="YIELD"||l==="Neto u")&&(String(v).trim().startsWith("-"))?"#f44336":"var(--g)",lineHeight:1}}>{v}</div>
-                <div style={{fontSize:"0.62rem",color:"var(--muted)",letterSpacing:1,marginTop:3}}>{l}</div>
-              </div>
+        </section>
+
+        <section style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:10}}>
+          {headlineCards.map((metric)=>(
+            <article key={metric.key} style={{background:"linear-gradient(160deg, rgba(16,24,20,0.95) 0%, rgba(10,16,13,0.95) 100%)",border:"1px solid rgba(29,185,84,0.25)",borderRadius:12,padding:"14px 12px"}}>
+              <div style={{fontSize:"0.64rem",letterSpacing:1.2,textTransform:"uppercase",color:"var(--muted)",marginBottom:6}}>{metric.label}</div>
+              <div style={{fontFamily:"'Bebas Neue'",fontSize:"2rem",lineHeight:1,color:metric.positive?"var(--g)":"#f44336"}}>{metric.value}</div>
+              <div style={{fontSize:"0.7rem",color:"var(--text-dim)",marginTop:5}}>{metric.caption}</div>
+            </article>
+          ))}
+        </section>
+
+        <section style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:12,padding:"14px"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:10}}>
+            <h3 style={{fontFamily:"'Bebas Neue'",fontSize:"1.55rem",letterSpacing:1,margin:0}}>Dashboard de <span style={{color:"var(--g)"}}>stats</span></h3>
+            <span style={{fontSize:"0.7rem",color:"var(--muted)",letterSpacing:1.1,textTransform:"uppercase"}}>Momio + Push incluidos</span>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:10}}>
+            {detailCards.map((metric)=>(
+              <article key={metric.key} style={{background:"rgba(12,19,16,0.9)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:10,padding:"12px 10px",textAlign:"center"}}>
+                <div style={{fontSize:"0.95rem",marginBottom:4}}>{metric.icon}</div>
+                <div style={{fontFamily:"'Bebas Neue'",fontSize:"1.75rem",lineHeight:1,color:"var(--g)"}}>{metric.value}</div>
+                <div style={{fontSize:"0.64rem",color:"var(--text)",letterSpacing:1,textTransform:"uppercase",marginTop:3,fontWeight:700}}>{metric.label}</div>
+                <div style={{fontSize:"0.66rem",color:"var(--muted)",marginTop:4}}>{metric.caption}</div>
+              </article>
             ))}
           </div>
-        </div>
-        <h3 style={{fontFamily:"'Bebas Neue'",fontSize:"1.4rem",marginBottom:16}}>Picks <span style={{color:"var(--g)"}}>Recientes</span></h3>
-        {myPicks.length===0 ? (
-          <div style={{textAlign:"center",color:"var(--muted)",padding:40}}>No hay picks disponibles</div>
-        ) : myPicks.slice(0,10).map((p,i)=>(
-          <div className="tpz-tipster-row" key={i} style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:"14px 16px",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-            <div>
-              <div style={{fontWeight:700,fontSize:"0.9rem"}}>{p.match}</div>
-              <div style={{fontSize:"0.72rem",color:"var(--muted)",marginTop:2}}>{p.league} · Momio {p.odds}</div>
-            </div>
-            <span style={{padding:"4px 10px",borderRadius:6,fontSize:"0.72rem",fontWeight:700,background:p.result==="won"?"rgba(29,185,84,0.15)":p.result==="lost"?"rgba(244,67,54,0.15)":"rgba(107,128,120,0.15)",color:p.result==="won"?"var(--g)":p.result==="lost"?"#f44336":"var(--muted)"}}>
-              {p.result==="won"?"GANADO":p.result==="lost"?"PERDIDO":p.result==="void"?"VOID":"PENDIENTE"}
-            </span>
+        </section>
+
+        <section>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:6}}>
+            <h3 style={{fontFamily:"'Bebas Neue'",fontSize:"1.6rem",letterSpacing:1,margin:0}}>Picks <span style={{color:"var(--g)"}}>Recientes</span></h3>
+            <span style={{fontSize:"0.72rem",color:"var(--muted)"}}>{recentPicks.length} mostrados</span>
           </div>
-        ))}
+          {recentPicks.length===0 ? (
+            <div style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:12,padding:"34px 16px",textAlign:"center",color:"var(--muted)"}}>
+              No hay picks disponibles aún para este tipster.
+            </div>
+          ) : recentPicks.map((pick, idx)=>{
+            const resultMeta = getPickResultMeta(pick?.result);
+            return (
+              <article key={pick?._id || pick?.id || `${pick?.match || "pick"}-${idx}`} style={{background:"linear-gradient(160deg, rgba(16,24,20,0.95) 0%, rgba(10,16,13,0.95) 100%)",border:"1px solid var(--border)",borderLeft:`4px solid ${resultMeta.accent}`,borderRadius:10,padding:"12px 13px",marginBottom:8}}>
+                <div style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"flex-start",flexWrap:"wrap"}}>
+                  <div style={{flex:1,minWidth:220}}>
+                    <div style={{fontWeight:700,fontSize:"0.92rem",marginBottom:4}}>{pick?.match || "Pick"}</div>
+                    <div style={{fontSize:"0.72rem",color:"var(--text-dim)"}}>
+                      {pick?.league || "Liga"} · Momio {formatOddsValue(pick?.odds)} · Bank {Math.max(0, Math.round(toSafeNumber(pick?.bank,0)))}%
+                    </div>
+                    <div style={{fontSize:"0.68rem",color:"var(--muted)",marginTop:4}}>
+                      {String(pick?.betType||"").toLowerCase()==="parlay" ? "Parlay" : "Straight"} · {getPickShareTime(pick)}
+                    </div>
+                  </div>
+                  <span style={{background:resultMeta.bg,color:resultMeta.color,border:resultMeta.border,padding:"4px 11px",borderRadius:100,fontSize:"0.68rem",fontWeight:800,letterSpacing:1}}>
+                    {resultMeta.label}
+                  </span>
+                </div>
+                {pick?.bet?.selection && (
+                  <div style={{marginTop:7,fontSize:"0.68rem",color:"var(--text-dim)"}}>
+                    Selección: {pick.bet.selection}
+                  </div>
+                )}
+              </article>
+            );
+          })}
+        </section>
       </div>
     </div>
   );
