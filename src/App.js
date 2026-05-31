@@ -1,5 +1,5 @@
 /* eslint-disable */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 const BACKEND_URL = "https://thepickzone-backend-1.onrender.com";
 
@@ -9,6 +9,7 @@ const G = `
   :root {
     --g: #1DB954; --gold: #F5C542; --dark: #0B0F0E; --d2: #0f1410; --d3: #111815;
     --d4: #161d1a; --border: #1e2d24; --text: #e8f0ec; --text-dim: #92a89f; --muted: #6B8078;
+    --tpz-nav-height: 74px;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--dark); color: var(--text); font-family: 'DM Sans', sans-serif; }
@@ -29,6 +30,11 @@ const G = `
     align-items: center;
     justify-content: center;
   }
+  .tpz-page,
+  .tpz-centered-page,
+  .tpz-purchase-shell { padding-top: calc(var(--tpz-nav-height, 74px) + 12px) !important; }
+  .tpz-hero { padding-top: max(90px, calc(var(--tpz-nav-height, 74px) + 18px)) !important; }
+  .tpz-nav { padding: calc(10px + env(safe-area-inset-top)) 5% 10px !important; }
   .tpz-watermark-layer {
     position: absolute; inset: 0; pointer-events: none;
     background: repeating-linear-gradient(-22deg, rgba(29,185,84,0.08) 0px, rgba(29,185,84,0.08) 18px, transparent 18px, transparent 76px);
@@ -38,7 +44,7 @@ const G = `
   .tpz-nav-actions::-webkit-scrollbar { display: none; }
   @media (max-width: 900px) {
     .tpz-nav {
-      padding: 10px 12px !important;
+      padding: calc(10px + env(safe-area-inset-top)) 12px 10px !important;
       flex-direction: column;
       align-items: stretch !important;
       gap: 8px;
@@ -83,10 +89,10 @@ const G = `
   @media (max-width: 768px) {
     .tpz-page,
     .tpz-centered-page,
-    .tpz-purchase-shell { padding: 78px 12px 28px !important; }
+    .tpz-purchase-shell { padding: calc(var(--tpz-nav-height, 74px) + 10px) 12px 28px !important; }
     .tpz-centered-page,
     .tpz-purchase-shell { align-items: flex-start !important; }
-    .tpz-hero { min-height: auto !important; padding: 84px 12px 30px !important; }
+    .tpz-hero { min-height: auto !important; padding: calc(var(--tpz-nav-height, 74px) + 14px) 12px 30px !important; }
     .tpz-hero-content { max-width: 100% !important; }
     .tpz-hero-content p { font-size: 0.92rem !important; line-height: 1.6 !important; margin-bottom: 24px !important; }
     .tpz-stats-grid { margin-top: 26px !important; gap: 10px !important; }
@@ -904,8 +910,27 @@ function PickShareButtons({ pick, compact = false, onDownloadImage }) {
 
 // ── NAVBAR ────────────────────────────────────────────────────────────────────
 function NavBar({ view, setView, user, setUser, notifications, setNotifications, onOpenOwnSummary }) {
+  const navRef = useRef(null);
+
+  useEffect(()=>{
+    const navEl = navRef.current;
+    if (!navEl) return;
+    const updateNavHeight = ()=>{
+      const nextHeight = navEl.offsetHeight;
+      if (!nextHeight) return;
+      document.documentElement.style.setProperty("--tpz-nav-height", `${Math.ceil(nextHeight)}px`);
+    };
+    updateNavHeight();
+    const resizeObserver = typeof ResizeObserver !== "undefined" ? new ResizeObserver(updateNavHeight) : null;
+    if (resizeObserver) resizeObserver.observe(navEl);
+    window.addEventListener("resize", updateNavHeight);
+    return ()=>{
+      window.removeEventListener("resize", updateNavHeight);
+      if (resizeObserver) resizeObserver.disconnect();
+    };
+  },[user]);
   return (
-    <nav className="tpz-nav" style={{position:"fixed",top:0,left:0,right:0,zIndex:200,background:"rgba(11,15,14,0.97)",backdropFilter:"blur(16px)",borderBottom:"1px solid var(--border)",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 5%"}}>
+    <nav ref={navRef} className="tpz-nav" style={{position:"fixed",top:0,left:0,right:0,zIndex:200,background:"rgba(11,15,14,0.97)",backdropFilter:"blur(16px)",borderBottom:"1px solid var(--border)",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 5%"}}>
       <button onClick={()=>setView("home")} style={{background:"none",border:"none",cursor:"pointer",color:"var(--g)",fontFamily:"'Bebas Neue'",fontSize:"1.4rem",letterSpacing:2}}>
         THE PICK ZONE
       </button>
