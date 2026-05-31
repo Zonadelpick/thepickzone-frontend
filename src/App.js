@@ -1740,7 +1740,7 @@ function PickShareButtons({ pick, compact = false, onDownloadImage }) {
     <>
       <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
         <button onClick={()=>setPreviewOpen(true)} title="Vista previa descargable" style={{...baseButtonStyle,padding:compact?"5px 8px":"7px 10px",fontSize:compact?"0.68rem":"0.75rem"}}>
-          {compact ? "IMG" : "Imagen"}
+          {compact ? "IMG" : "Descargar"}
         </button>
         <button onClick={handleNativeShare} style={{...baseButtonStyle,padding:compact?"5px 8px":"7px 10px",fontSize:compact?"0.68rem":"0.75rem"}}>
           {sharingNative ? "..." : (compact ? "Comp" : "Compartir")}
@@ -2432,6 +2432,11 @@ function PurchaseView({ pick, setView, user }) {
       setDownloadingTicket(false);
     }
   }
+  const downloadLegend = downloadingTicket
+    ? "Registrando descarga..."
+    : downloadCount > 0
+      ? `Descargado ${downloadCount} ${downloadCount === 1 ? "vez" : "veces"} · archivo con marca de agua`
+      : "Aún no lo has descargado · usa Descargar para bajar la imagen con marca de agua";
 
   if (step === 2) return (
     <div className="tpz-centered-page" style={{paddingTop:80,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:"clamp(80px,12vw,100px) 5% 60px"}}>
@@ -2451,7 +2456,7 @@ function PurchaseView({ pick, setView, user }) {
         <div style={{display:"flex",justifyContent:"center",marginBottom:12}}>
           <PickShareButtons pick={unlockedPick||activePick} onDownloadImage={handleTrackShareDownload} />
         </div>
-        <div style={{fontSize:"0.72rem",color:"var(--muted)",marginBottom:14}}>Descargado {downloadCount} veces · usa Imagen para descargar con marca de agua</div>
+        <div style={{fontSize:"0.72rem",color:"var(--muted)",marginBottom:14}}>{downloadLegend}</div>
         <button onClick={()=>setView("marketplace")} style={{background:"var(--g)",color:"#000",border:"none",padding:"13px 28px",borderRadius:8,fontFamily:"'Barlow Condensed'",fontSize:"1rem",fontWeight:900,letterSpacing:2,cursor:"pointer"}}>
           VER MÁS PICKS
         </button>
