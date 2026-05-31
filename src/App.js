@@ -42,7 +42,251 @@ const G = `
     text-transform: uppercase; display: flex; align-items: flex-end; justify-content: center; padding: 10px;
   }
   .tpz-nav-actions::-webkit-scrollbar { display: none; }
+  .tpz-landing-hero {
+    min-height: calc(100vh - 40px) !important;
+    background:
+      radial-gradient(circle at 85% 18%, rgba(29,185,84,0.22) 0%, rgba(29,185,84,0.03) 38%, transparent 64%),
+      radial-gradient(circle at 12% 80%, rgba(245,197,66,0.08) 0%, rgba(245,197,66,0.01) 42%, transparent 70%),
+      linear-gradient(180deg, #08110d 0%, #050a08 100%);
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    overflow: hidden;
+  }
+  .tpz-hero-glow {
+    position: absolute;
+    width: 440px;
+    height: 440px;
+    border-radius: 999px;
+    right: -140px;
+    top: 14%;
+    background: radial-gradient(circle, rgba(29,185,84,0.26) 0%, rgba(29,185,84,0.04) 58%, transparent 76%);
+    filter: blur(4px);
+    pointer-events: none;
+    animation: pulse 5.5s ease-in-out infinite;
+  }
+  .tpz-hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(29,185,84,0.12);
+    color: #8cf0ad;
+    border: 1px solid rgba(29,185,84,0.38);
+    padding: 7px 14px;
+    border-radius: 999px;
+    letter-spacing: 1px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  .tpz-hero-title {
+    font-family: 'Bebas Neue';
+    font-size: clamp(3.15rem,7.2vw,5.8rem);
+    line-height: .86;
+    letter-spacing: 2px;
+    margin-bottom: 18px;
+  }
+  .tpz-hero-title span { color: var(--g); }
+  .tpz-hero-subtitle {
+    font-size: 1.02rem;
+    color: var(--text-dim);
+    line-height: 1.8;
+    max-width: 560px;
+    margin-bottom: 30px;
+  }
+  .tpz-hero-cta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 30px;
+  }
+  .tpz-hero-secondary-btn {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(29,185,84,0.45);
+    color: var(--g);
+    padding: 14px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'Barlow Condensed';
+    font-size: 0.95rem;
+    font-weight: 800;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+  }
+  .tpz-proof-grid {
+    display: grid;
+    grid-template-columns: repeat(4,minmax(120px,1fr));
+    gap: 10px;
+    width: min(880px,100%);
+  }
+  .tpz-proof-card {
+    background: rgba(15,24,19,0.78);
+    border: 1px solid rgba(29,185,84,0.18);
+    border-radius: 12px;
+    padding: 14px 12px;
+    text-align: center;
+    backdrop-filter: blur(6px);
+  }
+  .tpz-proof-value {
+    font-family: 'Bebas Neue';
+    font-size: 2.05rem;
+    color: var(--g);
+    line-height: 1;
+  }
+  .tpz-proof-label {
+    font-size: 0.66rem;
+    color: var(--text-dim);
+    letter-spacing: 1.8px;
+    margin-top: 5px;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  .tpz-live-ticker {
+    border-top: 1px solid rgba(255,255,255,0.07);
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    background: rgba(8,14,11,0.92);
+    overflow: hidden;
+    padding: 10px 0;
+  }
+  .tpz-live-ticker-track {
+    width: max-content;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    animation: ticker 24s linear infinite;
+    color: var(--text-dim);
+    font-size: 0.74rem;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  .tpz-live-ticker-item { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+  .tpz-trust-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 22px;
+  }
+  .tpz-trust-chip {
+    background: rgba(17,24,21,0.9);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    color: var(--text-dim);
+    font-size: 0.72rem;
+    letter-spacing: 1px;
+    font-weight: 700;
+    padding: 7px 12px;
+  }
+  .tpz-how-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit,minmax(170px,1fr));
+    gap: 12px;
+  }
+  .tpz-how-card {
+    background: linear-gradient(180deg, rgba(18,24,21,0.98) 0%, rgba(13,18,16,0.98) 100%);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 14px;
+  }
+  .tpz-how-step {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Bebas Neue';
+    font-size: 1.1rem;
+    color: #000;
+    background: var(--g);
+    margin-bottom: 9px;
+  }
+  .tpz-how-title {
+    font-family: 'Barlow Condensed';
+    font-size: 1.07rem;
+    font-weight: 800;
+    letter-spacing: .8px;
+    margin-bottom: 5px;
+  }
+  .tpz-how-desc {
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    line-height: 1.6;
+  }
+  .tpz-highlight-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit,minmax(215px,1fr));
+    gap: 12px;
+  }
+  .tpz-highlight-card {
+    background: var(--d3);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 15px 14px;
+  }
+  .tpz-highlight-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 9px;
+  }
+  .tpz-highlight-name {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text);
+  }
+  .tpz-highlight-roi {
+    color: var(--g);
+    font-family: 'Bebas Neue';
+    font-size: 1.35rem;
+    letter-spacing: 1px;
+  }
+  .tpz-highlight-meta {
+    color: var(--text-dim);
+    font-size: 0.72rem;
+    line-height: 1.55;
+    margin-bottom: 10px;
+  }
+  .tpz-highlight-btn {
+    width: 100%;
+    border: 1px solid rgba(29,185,84,0.45);
+    background: rgba(29,185,84,0.07);
+    color: var(--g);
+    border-radius: 8px;
+    font-size: 0.73rem;
+    font-weight: 800;
+    letter-spacing: 1.4px;
+    padding: 8px 10px;
+    cursor: pointer;
+    text-transform: uppercase;
+  }
+  .tpz-landing-cta {
+    background: linear-gradient(120deg, rgba(29,185,84,0.17) 0%, rgba(15,22,18,0.95) 52%, rgba(245,197,66,0.14) 100%);
+    border: 1px solid rgba(29,185,84,0.34);
+    border-radius: 14px;
+    padding: clamp(18px,3vw,30px);
+  }
+  .tpz-landing-cta-title {
+    font-family: 'Bebas Neue';
+    font-size: clamp(1.9rem,4vw,2.7rem);
+    line-height: .94;
+    margin-bottom: 10px;
+    letter-spacing: 1.5px;
+  }
+  .tpz-landing-cta-subtitle {
+    color: var(--text-dim);
+    font-size: .92rem;
+    line-height: 1.7;
+    max-width: 640px;
+    margin-bottom: 16px;
+  }
+  .tpz-landing-cta-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
   @media (max-width: 900px) {
+    .tpz-proof-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .tpz-hero-glow { width: 330px; height: 330px; right: -110px; top: 8%; }
     .tpz-nav {
       padding: calc(10px + env(safe-area-inset-top)) 12px 10px !important;
       flex-direction: column;
@@ -85,6 +329,12 @@ const G = `
       flex-wrap: wrap !important;
       gap: 10px !important;
     }
+    .tpz-live-ticker-track { gap: 16px; font-size: 0.68rem; }
+    .tpz-hero-cta-row button,
+    .tpz-hero-secondary-btn { width: 100%; }
+    .tpz-how-grid,
+    .tpz-highlight-grid { grid-template-columns: 1fr; }
+    .tpz-landing-cta-actions button { width: 100%; }
   }
   @media (max-width: 768px) {
     .tpz-page,
@@ -95,6 +345,9 @@ const G = `
     .tpz-hero { min-height: auto !important; padding: calc(var(--tpz-nav-height, 74px) + 14px) 12px 30px !important; }
     .tpz-hero-content { max-width: 100% !important; }
     .tpz-hero-content p { font-size: 0.92rem !important; line-height: 1.6 !important; margin-bottom: 24px !important; }
+    .tpz-landing-hero { min-height: auto !important; }
+    .tpz-hero-title { font-size: clamp(2.45rem,11vw,4rem); }
+    .tpz-hero-subtitle { font-size: 0.9rem; line-height: 1.7; margin-bottom: 22px; }
     .tpz-stats-grid { margin-top: 26px !important; gap: 10px !important; }
     .tpz-stats-grid > div {
       min-width: calc(50% - 8px) !important;
@@ -112,6 +365,7 @@ const G = `
     .tpz-nav-user-actions { width: 100%; flex-wrap: wrap; gap: 6px !important; }
   }
   @media (max-width: 520px) {
+    .tpz-proof-grid { grid-template-columns: 1fr; }
     .tpz-nav-user-actions button { min-height: 34px !important; padding: 6px 9px !important; font-size: 0.64rem !important; }
     .tpz-nav-user-actions button:last-child { flex: 1 1 100%; }
     .tpz-stats-grid > div { min-width: 100% !important; flex: 1 1 100% !important; }
@@ -985,44 +1239,225 @@ function NavBar({ view, setView, user, setUser, notifications, setNotifications,
 
 // ── HOME ──────────────────────────────────────────────────────────────────────
 function HomeView({ setView, setPurchaseTarget, picks, setSelectedTipster }) {
-  const resolved = picks.filter(p=>p.result==="won"||p.result==="lost");
-  const won = picks.filter(p=>p.result==="won").length;
-  const winRate = resolved.length > 0 ? Math.round((won/resolved.length)*100) : 0;
+  const activePicks = picks.filter((pick)=>!isMatchStarted(pick.time));
+  const resolvedPicks = picks.filter((pick)=>pick.result==="won"||pick.result==="lost");
+  const wonCount = resolvedPicks.filter((pick)=>pick.result==="won").length;
+  const lostCount = resolvedPicks.filter((pick)=>pick.result==="lost").length;
+  const winRate = resolvedPicks.length > 0 ? Math.round((wonCount / resolvedPicks.length) * 100) : 0;
+  const avgOdds = resolvedPicks.length > 0
+    ? resolvedPicks.reduce((sum,pick)=>sum + toSafeNumber(pick?.odds,0),0) / resolvedPicks.length
+    : 0;
+  const totalSales = picks.reduce((sum,pick)=>sum + Math.max(0,toSafeNumber(pick?.salesCount,0)),0);
+  const totalTipsters = new Set(picks.map((pick)=>String(pick?.tipster||"").trim()).filter(Boolean)).size;
+
+  const tipsterMap = picks.reduce((acc,pick)=>{
+    const name = String(pick?.tipster || "").trim();
+    if (!name) return acc;
+    if (!acc[name]) acc[name] = { name, won: 0, lost: 0, total: 0, sales: 0 };
+    acc[name].total += 1;
+    if (pick.result === "won") acc[name].won += 1;
+    if (pick.result === "lost") acc[name].lost += 1;
+    acc[name].sales += Math.max(0, toSafeNumber(pick?.salesCount,0));
+    return acc;
+  }, {});
+
+  const topTipsters = Object.values(tipsterMap)
+    .map((tipster)=>{
+      const decisive = tipster.won + tipster.lost;
+      const tipsterWinRate = decisive > 0 ? Math.round((tipster.won / decisive) * 100) : 0;
+      return { ...tipster, decisive, winRate: tipsterWinRate };
+    })
+    .sort((a,b)=>{
+      if (b.winRate !== a.winRate) return b.winRate - a.winRate;
+      if (b.sales !== a.sales) return b.sales - a.sales;
+      return b.total - a.total;
+    })
+    .slice(0,3);
+
+  const proofCards = [
+    [winRate+"%","Win rate real"],
+    [activePicks.length+"+","Picks premium"],
+    [formatOddsValue(avgOdds),"Momio prom"],
+    [totalSales+"+","Ventas"],
+  ];
+
+  const tickerItems = [
+    `${activePicks.length}+ picks premium activos`,
+    `${winRate}% de efectividad validada`,
+    `${totalTipsters || 1} tipsters compitiendo en rankings`,
+    `${totalSales}+ ventas registradas`,
+    "Pagos semanales 90/10 transparentes",
+  ];
+
+  const trustBadges = [
+    "✔ Resultados con dictamen IA + validación admin",
+    "✔ Tickets reales con capa de protección",
+    "✔ Compra segura y desbloqueo inmediato",
+    "✔ Tipsters con historial público verificable",
+  ];
+
+  const howSteps = [
+    { id: "01", title: "Explora picks top", desc: "Filtra por liga, momio y rendimiento para elegir oportunidades con ventaja." },
+    { id: "02", title: "Compra y desbloquea", desc: "Paga en segundos y obtén acceso al ticket premium del tipster." },
+    { id: "03", title: "Sigue resultados", desc: "Consulta dictamen final, historial y ranking actualizado en tiempo real." },
+  ];
 
   return (
     <div>
-      <section className="tpz-hero" style={{minHeight:"100vh",display:"flex",alignItems:"center",padding:"clamp(90px,15vw,120px) 5% 60px",position:"relative"}}>
-        <div className="tpz-hero-content" style={{position:"relative",zIndex:2,maxWidth:660,animation:"fadeUp .7s ease both"}}>
-          <h1 style={{fontFamily:"'Bebas Neue'",fontSize:"clamp(3rem,7vw,5.5rem)",lineHeight:.9,letterSpacing:2,marginBottom:24}}>
-            Picks deportivos<br/><span style={{color:"var(--g)"}}>de elite</span>
-          </h1>
-          <p style={{fontSize:"1.05rem",color:"var(--text-dim)",lineHeight:1.8,maxWidth:480,marginBottom:40}}>
-            Compra picks verificados de los mejores tipsters. Momios reales, tickets de apuesta, resultados comprobados.
-          </p>
-          <button onClick={()=>setView("marketplace")} style={{background:"var(--g)",color:"#000",border:"none",padding:"15px 36px",borderRadius:6,fontFamily:"'Barlow Condensed'",fontSize:"1rem",fontWeight:900,letterSpacing:2,cursor:"pointer"}}>
-            VER TODOS LOS PICKS
-          </button>
-          <div className="tpz-stats-grid" style={{display:"flex",gap:16,marginTop:48,flexWrap:"wrap"}}>
-            {[[winRate+"%","Win Rate"],[picks.length+"+","Picks activos"],["3","Tipsters Pro"]].map(([v,l])=>(
-              <div key={l} style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:"18px 22px",textAlign:"center",minWidth:110}}>
-                <div style={{fontFamily:"'Bebas Neue'",fontSize:"2.4rem",color:"var(--g)",lineHeight:1}}>{v}</div>
-                <div style={{fontSize:"0.7rem",color:"var(--text-dim)",letterSpacing:2,marginTop:4,fontWeight:600}}>{l}</div>
+      <section className="tpz-hero tpz-landing-hero" style={{display:"flex",alignItems:"center",padding:"clamp(90px,14vw,120px) 5% 72px",position:"relative"}}>
+        <div className="tpz-hero-glow" />
+        <div className="tpz-two-col-grid" style={{position:"relative",zIndex:2,width:"100%",display:"grid",gridTemplateColumns:"minmax(0,1.25fr) minmax(220px,.75fr)",gap:16,alignItems:"stretch"}}>
+          <div className="tpz-hero-content" style={{animation:"fadeUp .7s ease both"}}>
+            <span className="tpz-hero-badge">⚡ Picks premium verificados</span>
+            <h1 className="tpz-hero-title">Domina el juego con <span>picks de élite</span></h1>
+            <p className="tpz-hero-subtitle">
+              Análisis de tipsters top, tickets reales y estadísticas transparentes para apostar con más confianza y control.
+            </p>
+            <div className="tpz-hero-cta-row">
+              <button onClick={()=>setView("marketplace")} style={{background:"var(--g)",color:"#000",border:"none",padding:"14px 28px",borderRadius:8,fontFamily:"'Barlow Condensed'",fontSize:"0.95rem",fontWeight:900,letterSpacing:2,cursor:"pointer"}}>
+                VER PICKS PREMIUM
+              </button>
+              <button onClick={()=>setView("rankings")} className="tpz-hero-secondary-btn">
+                VER RANKINGS PRO
+              </button>
+            </div>
+            <div className="tpz-proof-grid">
+              {proofCards.map(([value,label])=>(
+                <div key={label} className="tpz-proof-card">
+                  <div className="tpz-proof-value">{value}</div>
+                  <div className="tpz-proof-label">{label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={{background:"rgba(16,22,19,0.88)",border:"1px solid rgba(29,185,84,0.22)",borderRadius:12,padding:"14px 12px",alignSelf:"end"}}>
+            <div style={{fontSize:"0.66rem",color:"var(--g)",letterSpacing:1.5,fontWeight:700,marginBottom:8,textTransform:"uppercase"}}>
+              Radar en vivo
+            </div>
+            <div style={{fontFamily:"'Bebas Neue'",fontSize:"1.6rem",lineHeight:1,marginBottom:8}}>
+              {activePicks.length}+ picks abiertos
+            </div>
+            <div style={{fontSize:"0.73rem",lineHeight:1.5,color:"var(--text-dim)",marginBottom:10}}>
+              W/L: {wonCount}-{lostCount} · promedio de momio {formatOddsValue(avgOdds)}
+            </div>
+            {topTipsters.length > 0 ? topTipsters.map((tipster)=>(
+              <div key={tipster.name} style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:8,padding:"8px 9px",marginBottom:7}}>
+                <div style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"center"}}>
+                  <button onClick={()=>{ setSelectedTipster&&setSelectedTipster(tipster.name); setView("tipster-profile"); }} style={{background:"none",border:"none",padding:0,color:"var(--text)",fontWeight:700,fontSize:"0.8rem",cursor:"pointer",textAlign:"left"}}>
+                    {tipster.name}
+                  </button>
+                  <span style={{color:"var(--g)",fontFamily:"'Bebas Neue'",fontSize:"1.05rem",lineHeight:1}}>{tipster.winRate}%</span>
+                </div>
+                <div style={{fontSize:"0.66rem",color:"var(--muted)"}}>
+                  {tipster.won}-{tipster.lost} W/L · {tipster.sales} ventas
+                </div>
               </div>
-            ))}
+            )) : (
+              <div style={{fontSize:"0.72rem",color:"var(--muted)"}}>Pronto verás aquí a los tipsters con mejor performance.</div>
+            )}
           </div>
         </div>
       </section>
 
-      {picks.length > 0 && (
-        <section className="tpz-section" style={{padding:"60px 5%",background:"var(--d2)"}}>
-          <h2 style={{fontFamily:"'Bebas Neue'",fontSize:"2rem",marginBottom:24}}>Picks <span style={{color:"var(--g)"}}>disponibles</span></h2>
-          <div className="tpz-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:16}}>
-            {picks.filter(p=>!isMatchStarted(p.time)).slice(0,4).map((p,i)=>(
-              <PickCard key={p._id||i} pick={p} setView={setView} setPurchaseTarget={setPurchaseTarget} setSelectedTipster={setSelectedTipster}/>
+      <section className="tpz-live-ticker">
+        <div className="tpz-live-ticker-track">
+          {[...tickerItems, ...tickerItems].map((item,index)=>(
+            <span key={`${item}-${index}`} className="tpz-live-ticker-item">● {item}</span>
+          ))}
+        </div>
+      </section>
+
+      <section className="tpz-section" style={{padding:"42px 5%",background:"var(--d2)"}}>
+        <div className="tpz-trust-row">
+          {trustBadges.map((badge)=><span key={badge} className="tpz-trust-chip">{badge}</span>)}
+        </div>
+        <h2 style={{fontFamily:"'Bebas Neue'",fontSize:"clamp(1.8rem,3.8vw,2.6rem)",letterSpacing:1.2,marginBottom:16}}>
+          ¿Cómo funciona <span style={{color:"var(--g)"}}>The Pick Zone</span>?
+        </h2>
+        <div className="tpz-how-grid">
+          {howSteps.map((step)=>(
+            <div key={step.id} className="tpz-how-card">
+              <span className="tpz-how-step">{step.id}</span>
+              <div className="tpz-how-title">{step.title}</div>
+              <div className="tpz-how-desc">{step.desc}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="tpz-section" style={{padding:"42px 5%",background:"var(--dark)"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:16}}>
+          <h2 style={{fontFamily:"'Bebas Neue'",fontSize:"clamp(1.8rem,3.8vw,2.6rem)",letterSpacing:1.2}}>
+            Tipsters <span style={{color:"var(--g)"}}>que están rompiendo</span>
+          </h2>
+          <button onClick={()=>setView("rankings")} className="tpz-hero-secondary-btn" style={{padding:"9px 14px",fontSize:"0.73rem"}}>
+            VER TABLA COMPLETA
+          </button>
+        </div>
+        {topTipsters.length > 0 ? (
+          <div className="tpz-highlight-grid">
+            {topTipsters.map((tipster)=>(
+              <div key={tipster.name} className="tpz-highlight-card">
+                <div className="tpz-highlight-head">
+                  <span className="tpz-highlight-name">{tipster.name}</span>
+                  <span className="tpz-highlight-roi">{tipster.winRate}%</span>
+                </div>
+                <div className="tpz-highlight-meta">
+                  {tipster.total} picks · {tipster.won}-{tipster.lost} W/L<br/>
+                  {tipster.sales} ventas acumuladas
+                </div>
+                <button
+                  className="tpz-highlight-btn"
+                  onClick={()=>{
+                    setSelectedTipster&&setSelectedTipster(tipster.name);
+                    setView("tipster-profile");
+                  }}
+                >
+                  Ver perfil del tipster
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{fontSize:"0.82rem",color:"var(--muted)"}}>Estamos recopilando historial para mostrar el top completo de tipsters.</div>
+        )}
+      </section>
+
+      {activePicks.length > 0 && (
+        <section className="tpz-section" style={{padding:"42px 5%",background:"var(--d2)"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:16}}>
+            <h2 style={{fontFamily:"'Bebas Neue'",fontSize:"clamp(1.8rem,3.8vw,2.6rem)",letterSpacing:1.2}}>
+              Picks <span style={{color:"var(--g)"}}>calientes de hoy</span>
+            </h2>
+            <button onClick={()=>setView("marketplace")} className="tpz-hero-secondary-btn" style={{padding:"9px 14px",fontSize:"0.73rem"}}>
+              VER MARKETPLACE
+            </button>
+          </div>
+          <div className="tpz-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:14}}>
+            {activePicks.slice(0,6).map((pick,index)=>(
+              <PickCard key={pick._id||index} pick={pick} setView={setView} setPurchaseTarget={setPurchaseTarget} setSelectedTipster={setSelectedTipster}/>
             ))}
           </div>
         </section>
       )}
+
+      <section className="tpz-section" style={{padding:"24px 5% 56px",background:"var(--dark)"}}>
+        <div className="tpz-landing-cta">
+          <h3 className="tpz-landing-cta-title">¿Listo para pasar al siguiente nivel?</h3>
+          <p className="tpz-landing-cta-subtitle">
+            Sube tu propio rendimiento, sigue tipsters de alto impacto o conviértete en Pro para publicar picks y monetizar tu ventaja.
+          </p>
+          <div className="tpz-landing-cta-actions">
+            <button onClick={()=>setView("become-pro")} style={{background:"var(--g)",color:"#000",border:"none",padding:"12px 24px",borderRadius:8,fontFamily:"'Barlow Condensed'",fontSize:"0.9rem",fontWeight:900,letterSpacing:2,cursor:"pointer"}}>
+              QUIERO SER PRO
+            </button>
+            <button onClick={()=>setView("marketplace")} className="tpz-hero-secondary-btn" style={{padding:"11px 18px",fontSize:"0.8rem"}}>
+              EXPLORAR PICKS
+            </button>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
