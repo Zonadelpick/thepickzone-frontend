@@ -4456,7 +4456,7 @@ function AdminPanel({ setView, user, picks }) {
     const result = String(resultValue || "pending").toLowerCase();
     if (result === "won") return "GANADO";
     if (result === "lost") return "PERDIDO";
-    if (result === "void") return "VOID";
+    if (result === "void") return "PUSH";
     return "PENDIENTE";
   }
 
@@ -4464,7 +4464,7 @@ function AdminPanel({ setView, user, picks }) {
     const verdict = String(verdictValue || "").toLowerCase();
     if (verdict === "won") return "GANADO";
     if (verdict === "lost") return "PERDIDO";
-    if (verdict === "void") return "VOID";
+    if (verdict === "void") return "PUSH";
     if (verdict === "pending") return "PENDIENTE";
     if (verdict === "inconclusive") return "INCONCLUSO";
     if (verdict === "error") return "ERROR";
@@ -4773,7 +4773,7 @@ function AdminPanel({ setView, user, picks }) {
                 <button onClick={clearSelection} disabled={selectedPickIds.length===0} style={{background:"var(--d4)",border:"1px solid var(--border)",color:selectedPickIds.length===0?"var(--muted)":"var(--text)",padding:"6px 10px",borderRadius:6,cursor:selectedPickIds.length===0?"not-allowed":"pointer",fontSize:"0.72rem",fontWeight:700}}>Limpiar selección</button>
                 <button onClick={()=>runBulkResult("won")} disabled={bulkBusy || selectedPickIds.length===0} style={{background:"rgba(29,185,84,0.15)",border:"1px solid var(--g)",color:"var(--g)",padding:"6px 10px",borderRadius:6,cursor:bulkBusy || selectedPickIds.length===0?"not-allowed":"pointer",fontSize:"0.72rem",fontWeight:700}}>Masivo GANADO</button>
                 <button onClick={()=>runBulkResult("lost")} disabled={bulkBusy || selectedPickIds.length===0} style={{background:"rgba(244,67,54,0.15)",border:"1px solid #f44336",color:"#f44336",padding:"6px 10px",borderRadius:6,cursor:bulkBusy || selectedPickIds.length===0?"not-allowed":"pointer",fontSize:"0.72rem",fontWeight:700}}>Masivo PERDIDO</button>
-                <button onClick={()=>runBulkResult("void")} disabled={bulkBusy || selectedPickIds.length===0} style={{background:"rgba(245,197,66,0.15)",border:"1px solid var(--gold)",color:"var(--gold)",padding:"6px 10px",borderRadius:6,cursor:bulkBusy || selectedPickIds.length===0?"not-allowed":"pointer",fontSize:"0.72rem",fontWeight:700}}>Masivo VOID</button>
+                <button onClick={()=>runBulkResult("void")} disabled={bulkBusy || selectedPickIds.length===0} style={{background:"rgba(245,197,66,0.15)",border:"1px solid var(--gold)",color:"var(--gold)",padding:"6px 10px",borderRadius:6,cursor:bulkBusy || selectedPickIds.length===0?"not-allowed":"pointer",fontSize:"0.72rem",fontWeight:700}}>Masivo PUSH</button>
                 <button onClick={runBulkAnalyze} disabled={bulkBusy || selectedPickIds.length===0} style={{background:"rgba(100,100,255,0.15)",border:"1px solid #6464ff",color:"#8b8bff",padding:"6px 10px",borderRadius:6,cursor:bulkBusy || selectedPickIds.length===0?"not-allowed":"pointer",fontSize:"0.72rem",fontWeight:700}}>Re-analizar selección</button>
               </div>
             </div>
@@ -4794,57 +4794,74 @@ function AdminPanel({ setView, user, picks }) {
               const reopenedBy = verification.reopenedBy ? ` por ${verification.reopenedBy}` : "";
               const reopenedAt = verification.reopenedAt ? ` · ${new Date(verification.reopenedAt).toLocaleString("es-MX")}` : "";
               return (
-                <div key={p._id||i} style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:16,marginBottom:10}}>
-                  <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:10}}>
-                    <label style={{display:"flex",alignItems:"center",gap:6,fontSize:"0.68rem",color:"var(--muted)"}}>
-                      <input type="checkbox" checked={selectedSet.has(String(p._id || ""))} onChange={()=>togglePickSelection(p._id)} />
-                      Sel
-                    </label>
-                    {p.ticketImg&&<img src={p.ticketImg} alt="ticket" style={{width:100,height:70,objectFit:"cover",borderRadius:6,cursor:"pointer"}} onClick={()=>{const d=document.createElement("div");d.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:pointer";d.onclick=()=>document.body.removeChild(d);const img=document.createElement("img");img.src=p.ticketImg;img.style.cssText="max-width:90vw;max-height:90vh;object-fit:contain";d.appendChild(img);document.body.appendChild(d);}}/>}
-                    <div style={{flex:1}}>
-                      <div style={{fontWeight:700,fontSize:"0.9rem",marginBottom:4}}>{p.match}</div>
-                      <div style={{fontSize:"0.72rem",color:"var(--muted)",marginBottom:6}}>{p.league} · {p.tipster} · Momio {p.odds}</div>
-                      <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:6}}>
-                        <span style={{...statusStyle,padding:"3px 10px",borderRadius:100,fontSize:"0.66rem",fontWeight:700}}>{statusLabel}</span>
-                        {preliminaryVerdict && (
-                          <span style={{background:"rgba(245,197,66,0.16)",color:"var(--gold)",border:"1px solid rgba(245,197,66,0.35)",padding:"3px 10px",borderRadius:100,fontSize:"0.66rem",fontWeight:700}}>
-                            PRELIMINAR: {getPreliminaryVerdictLabel(preliminaryVerdict)}{preliminaryConfidenceText}
-                          </span>
-                        )}
-                        {p.result!=="pending" && (
-                          <span style={{background:p.result==="won"?"rgba(29,185,84,0.15)":p.result==="lost"?"rgba(244,67,54,0.15)":"rgba(245,197,66,0.15)",color:p.result==="won"?"var(--g)":p.result==="lost"?"#f44336":"var(--gold)",border:"1px solid rgba(255,255,255,0.2)",padding:"3px 10px",borderRadius:100,fontSize:"0.66rem",fontWeight:700}}>
-                            OFICIAL: {getHumanResultLabel(p.result)}
-                          </span>
-                        )}
-                      </div>
-                      {betSummary && <div style={{fontSize:"0.68rem",color:"var(--text-dim)",marginBottom:4}}>Mercado: {betSummary}</div>}
-                      {Number.isFinite(preliminaryConfidence) && (
-                        <div style={{fontSize:"0.68rem",color:"var(--gold)",marginBottom:4}}>Confianza IA: {preliminaryConfidence}%</div>
+                <div key={p._id||i} style={{background:"linear-gradient(180deg, var(--d3) 0%, rgba(17,24,21,0.98) 100%)",border:"1px solid var(--border)",borderRadius:12,padding:14,marginBottom:10}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10,flexWrap:"wrap",marginBottom:10}}>
+                    <div style={{display:"flex",gap:10,alignItems:"flex-start",flex:1,minWidth:220}}>
+                      <label style={{display:"flex",alignItems:"center",gap:6,fontSize:"0.68rem",color:"var(--muted)",marginTop:2}}>
+                        <input type="checkbox" checked={selectedSet.has(String(p._id || ""))} onChange={()=>togglePickSelection(p._id)} />
+                        Sel
+                      </label>
+                      {p.ticketImg ? (
+                        <img src={p.ticketImg} alt="ticket" style={{width:92,height:64,objectFit:"cover",borderRadius:7,cursor:"pointer",border:"1px solid var(--border)"}} onClick={()=>{const d=document.createElement("div");d.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:pointer";d.onclick=()=>document.body.removeChild(d);const img=document.createElement("img");img.src=p.ticketImg;img.style.cssText="max-width:90vw;max-height:90vh;object-fit:contain";d.appendChild(img);document.body.appendChild(d);}}/>
+                      ) : (
+                        <div style={{width:92,height:64,borderRadius:7,border:"1px dashed var(--border)",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--muted)",fontSize:"0.9rem"}}>📄</div>
                       )}
-                      {aiArgument && <div style={{fontSize:"0.68rem",color:"var(--text-dim)",marginBottom:4}}>Argumento IA: {aiArgument}</div>}
-                      {String(verification.status||"").toLowerCase()==="reopened" && (
-                        <div style={{fontSize:"0.68rem",color:"#8b8bff",marginBottom:4}}>Inconformidad / reapertura{reopenedBy}{reopenedAt}</div>
-                      )}
-                      <div style={{background:"var(--d4)",border:"1px solid var(--border)",borderRadius:6,padding:"6px 8px",marginTop:6}}>
-                        <div style={{fontSize:"0.66rem",color:"var(--muted)",marginBottom:4}}>Evidencia ({evidenceItems.length})</div>
-                        {evidenceItems.length>0 ? (
-                          <>
-                            {evidenceItems.slice(0,3).map((item,idx)=>(
-                              <div key={idx} style={{fontSize:"0.68rem",color:"var(--text-dim)",lineHeight:1.5}}>• {getEvidenceText(item)}</div>
-                            ))}
-                            {evidenceItems.length>3 && <div style={{fontSize:"0.68rem",color:"var(--muted)"}}>+{evidenceItems.length-3} evidencias más</div>}
-                          </>
-                        ) : (
-                          <div style={{fontSize:"0.68rem",color:"var(--muted)"}}>Sin evidencia disponible</div>
-                        )}
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontWeight:800,fontSize:"0.9rem",lineHeight:1.35,marginBottom:4}}>{p.match}</div>
+                        <div style={{fontSize:"0.72rem",color:"var(--muted)",lineHeight:1.5}}>{p.league} · {p.tipster} · Momio {p.odds}</div>
+                        {betSummary && <div style={{fontSize:"0.68rem",color:"var(--text-dim)",marginTop:4,overflowWrap:"anywhere"}}>Mercado: {betSummary}</div>}
                       </div>
                     </div>
+                    <div style={{display:"flex",flexDirection:"column",gap:6,alignItems:"flex-start"}}>
+                      <span style={{...statusStyle,padding:"3px 10px",borderRadius:100,fontSize:"0.66rem",fontWeight:700}}>{statusLabel}</span>
+                      {preliminaryVerdict && (
+                        <span style={{background:"rgba(245,197,66,0.16)",color:"var(--gold)",border:"1px solid rgba(245,197,66,0.35)",padding:"3px 10px",borderRadius:100,fontSize:"0.66rem",fontWeight:700}}>
+                          PRELIMINAR: {getPreliminaryVerdictLabel(preliminaryVerdict)}{preliminaryConfidenceText}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                    <button onClick={()=>approveResult(p._id,"won")} style={{background:"rgba(29,185,84,0.15)",border:"1px solid var(--g)",color:"var(--g)",padding:"8px 16px",borderRadius:6,cursor:"pointer",fontWeight:700,fontSize:"0.8rem"}}>GANADO</button>
-                    <button onClick={()=>approveResult(p._id,"lost")} style={{background:"rgba(244,67,54,0.15)",border:"1px solid #f44336",color:"#f44336",padding:"8px 16px",borderRadius:6,cursor:"pointer",fontWeight:700,fontSize:"0.8rem"}}>PERDIDO</button>
-                    <button onClick={()=>approveResult(p._id,"void")} style={{background:"rgba(245,197,66,0.15)",border:"1px solid var(--gold)",color:"var(--gold)",padding:"8px 16px",borderRadius:6,cursor:"pointer",fontWeight:700,fontSize:"0.8rem"}}>VOID</button>
-                    <button onClick={()=>reanalyze(p._id)} style={{background:"rgba(100,100,255,0.15)",border:"1px solid #6464ff",color:"#6464ff",padding:"8px 16px",borderRadius:6,cursor:"pointer",fontWeight:700,fontSize:"0.8rem"}}>RE-ANALIZAR</button>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:8,marginBottom:10}}>
+                    {Number.isFinite(preliminaryConfidence) && (
+                      <div style={{background:"rgba(245,197,66,0.08)",border:"1px solid rgba(245,197,66,0.28)",borderRadius:7,padding:"6px 8px",fontSize:"0.68rem",color:"var(--gold)"}}>
+                        Confianza IA: {preliminaryConfidence}%
+                      </div>
+                    )}
+                    {p.result!=="pending" && (
+                      <div style={{background:p.result==="won"?"rgba(29,185,84,0.12)":p.result==="lost"?"rgba(244,67,54,0.12)":"rgba(245,197,66,0.12)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:7,padding:"6px 8px",fontSize:"0.68rem",color:p.result==="won"?"var(--g)":p.result==="lost"?"#f44336":"var(--gold)"}}>
+                        OFICIAL: {getHumanResultLabel(p.result)}
+                      </div>
+                    )}
+                    {String(verification.status||"").toLowerCase()==="reopened" && (
+                      <div style={{gridColumn:"1 / -1",fontSize:"0.68rem",color:"#8b8bff",background:"rgba(100,100,255,0.08)",border:"1px solid rgba(100,100,255,0.28)",borderRadius:7,padding:"6px 8px"}}>
+                        Inconformidad / reapertura{reopenedBy}{reopenedAt}
+                      </div>
+                    )}
+                  </div>
+                  {aiArgument && (
+                    <div style={{background:"rgba(255,255,255,0.02)",border:"1px solid var(--border)",borderLeft:"3px solid var(--g)",borderRadius:8,padding:"8px 10px",marginBottom:10}}>
+                      <div style={{fontSize:"0.64rem",color:"var(--g)",fontWeight:700,letterSpacing:1,marginBottom:4}}>ARGUMENTO IA</div>
+                      <div style={{fontSize:"0.72rem",color:"var(--text-dim)",lineHeight:1.55}}>{aiArgument}</div>
+                    </div>
+                  )}
+                  <div style={{background:"var(--d4)",border:"1px solid var(--border)",borderRadius:8,padding:"8px 10px"}}>
+                    <div style={{fontSize:"0.66rem",color:"var(--muted)",marginBottom:4}}>Evidencia ({evidenceItems.length})</div>
+                    {evidenceItems.length>0 ? (
+                      <>
+                        {evidenceItems.slice(0,3).map((item,idx)=>(
+                          <div key={idx} style={{fontSize:"0.68rem",color:"var(--text-dim)",lineHeight:1.55}}>• {getEvidenceText(item)}</div>
+                        ))}
+                        {evidenceItems.length>3 && <div style={{fontSize:"0.68rem",color:"var(--muted)"}}>+{evidenceItems.length-3} evidencias más</div>}
+                      </>
+                    ) : (
+                      <div style={{fontSize:"0.68rem",color:"var(--muted)"}}>Sin evidencia disponible</div>
+                    )}
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:8,marginTop:10}}>
+                    <button onClick={()=>approveResult(p._id,"won")} style={{background:"rgba(29,185,84,0.15)",border:"1px solid var(--g)",color:"var(--g)",padding:"8px 10px",borderRadius:6,cursor:"pointer",fontWeight:700,fontSize:"0.75rem",width:"100%"}}>GANADO</button>
+                    <button onClick={()=>approveResult(p._id,"lost")} style={{background:"rgba(244,67,54,0.15)",border:"1px solid #f44336",color:"#f44336",padding:"8px 10px",borderRadius:6,cursor:"pointer",fontWeight:700,fontSize:"0.75rem",width:"100%"}}>PERDIDO</button>
+                    <button onClick={()=>approveResult(p._id,"void")} style={{background:"rgba(245,197,66,0.15)",border:"1px solid var(--gold)",color:"var(--gold)",padding:"8px 10px",borderRadius:6,cursor:"pointer",fontWeight:700,fontSize:"0.75rem",width:"100%"}}>PUSH</button>
+                    <button onClick={()=>reanalyze(p._id)} style={{background:"rgba(100,100,255,0.15)",border:"1px solid #6464ff",color:"#8b8bff",padding:"8px 10px",borderRadius:6,cursor:"pointer",fontWeight:700,fontSize:"0.75rem",width:"100%"}}>RE-ANALIZAR</button>
                   </div>
                 </div>
               );
