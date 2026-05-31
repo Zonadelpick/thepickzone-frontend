@@ -284,9 +284,306 @@ const G = `
     gap: 10px;
     flex-wrap: wrap;
   }
+  .tpz-market-shell {
+    background:
+      radial-gradient(circle at 82% 6%, rgba(29,185,84,0.12) 0%, rgba(29,185,84,0.02) 36%, transparent 58%),
+      linear-gradient(180deg, rgba(11,15,14,0.98) 0%, rgba(9,13,11,1) 100%);
+  }
+  .tpz-market-hero {
+    background: linear-gradient(135deg, rgba(16,24,20,0.98) 0%, rgba(12,18,15,0.98) 100%);
+    border: 1px solid rgba(29,185,84,0.24);
+    border-radius: 16px;
+    padding: clamp(18px,3vw,30px);
+    margin-bottom: 20px;
+  }
+  .tpz-market-badge-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .tpz-market-badge {
+    background: rgba(29,185,84,0.12);
+    border: 1px solid rgba(29,185,84,0.35);
+    color: #89edaa;
+    border-radius: 100px;
+    padding: 5px 10px;
+    font-size: 0.66rem;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    font-weight: 800;
+  }
+  .tpz-market-hero-title {
+    font-family: 'Bebas Neue';
+    font-size: clamp(2.2rem,5vw,3.8rem);
+    line-height: .9;
+    letter-spacing: 1.4px;
+    margin-bottom: 8px;
+  }
+  .tpz-market-hero-subtitle {
+    color: var(--text-dim);
+    font-size: 0.9rem;
+    line-height: 1.7;
+    max-width: 720px;
+  }
+  .tpz-market-kpis {
+    display: grid;
+    grid-template-columns: repeat(4,minmax(120px,1fr));
+    gap: 10px;
+    margin-top: 14px;
+  }
+  .tpz-market-kpi {
+    background: rgba(17,24,21,0.9);
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    padding: 11px 10px;
+    text-align: center;
+  }
+  .tpz-market-kpi-value {
+    font-family: 'Bebas Neue';
+    font-size: 1.75rem;
+    line-height: 1;
+    color: var(--g);
+  }
+  .tpz-market-kpi-label {
+    margin-top: 4px;
+    font-size: 0.64rem;
+    letter-spacing: 1.4px;
+    color: var(--muted);
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  .tpz-market-highlight {
+    margin-top: 14px;
+    background: rgba(7,14,11,0.92);
+    border: 1px solid rgba(245,197,66,0.3);
+    border-radius: 12px;
+    padding: 12px 13px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .tpz-market-highlight-title {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 2px;
+  }
+  .tpz-market-highlight-meta {
+    font-size: 0.72rem;
+    color: var(--text-dim);
+  }
+  .tpz-market-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+  .tpz-market-title {
+    font-family: 'Bebas Neue';
+    font-size: clamp(1.7rem,3.6vw,2.35rem);
+    letter-spacing: 1px;
+  }
+  .tpz-market-empty {
+    border: 1px solid var(--border);
+    background: var(--d3);
+    border-radius: 14px;
+    text-align: center;
+    padding: 48px 16px;
+    color: var(--text-dim);
+    line-height: 1.7;
+  }
+  .tpz-market-empty strong {
+    color: var(--text);
+    font-family: 'Barlow Condensed';
+    font-size: 1.05rem;
+    letter-spacing: .8px;
+    display: block;
+    margin-bottom: 6px;
+  }
+  .tpz-rankings-shell {
+    background:
+      radial-gradient(circle at 8% 0%, rgba(245,197,66,0.09) 0%, rgba(245,197,66,0.02) 36%, transparent 56%),
+      linear-gradient(180deg, rgba(11,15,14,0.98) 0%, rgba(10,13,12,1) 100%);
+  }
+  .tpz-rankings-hero {
+    background: linear-gradient(145deg, rgba(16,23,19,0.98) 0%, rgba(12,17,15,0.98) 100%);
+    border: 1px solid rgba(29,185,84,0.24);
+    border-radius: 16px;
+    padding: clamp(18px,3vw,30px);
+    margin-bottom: 18px;
+  }
+  .tpz-rankings-title {
+    font-family: 'Bebas Neue';
+    font-size: clamp(2.2rem,5vw,3.8rem);
+    line-height: .9;
+    letter-spacing: 1.4px;
+    margin-bottom: 9px;
+  }
+  .tpz-rankings-subtitle {
+    color: var(--text-dim);
+    font-size: 0.9rem;
+    line-height: 1.7;
+    max-width: 740px;
+    margin-bottom: 14px;
+  }
+  .tpz-rankings-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4,minmax(120px,1fr));
+    gap: 10px;
+  }
+  .tpz-rankings-summary-card {
+    background: rgba(17,24,21,0.9);
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    padding: 11px 10px;
+    text-align: center;
+  }
+  .tpz-rankings-summary-value {
+    font-family: 'Bebas Neue';
+    font-size: 1.7rem;
+    line-height: 1;
+    color: var(--g);
+  }
+  .tpz-rankings-summary-label {
+    margin-top: 4px;
+    font-size: 0.64rem;
+    letter-spacing: 1.4px;
+    color: var(--muted);
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  .tpz-ranking-filter-btn {
+    background: var(--d3);
+    color: var(--muted);
+    border: 1px solid var(--border);
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.78rem;
+    font-weight: 700;
+  }
+  .tpz-ranking-filter-btn.active {
+    background: var(--g);
+    color: #000;
+    border-color: var(--g);
+  }
+  .tpz-ranking-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .tpz-ranking-card {
+    background: var(--d3);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .tpz-ranking-card-top-1 {
+    border-color: rgba(245,197,66,0.45);
+    background: linear-gradient(135deg, rgba(245,197,66,0.12) 0%, rgba(17,24,21,0.95) 38%, rgba(17,24,21,0.95) 100%);
+  }
+  .tpz-ranking-card-top-2 {
+    border-color: rgba(173,184,194,0.4);
+    background: linear-gradient(135deg, rgba(173,184,194,0.1) 0%, rgba(17,24,21,0.95) 44%, rgba(17,24,21,0.95) 100%);
+  }
+  .tpz-ranking-card-top-3 {
+    border-color: rgba(205,127,50,0.42);
+    background: linear-gradient(135deg, rgba(205,127,50,0.13) 0%, rgba(17,24,21,0.95) 44%, rgba(17,24,21,0.95) 100%);
+  }
+  .tpz-ranking-main {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    flex: 1;
+    min-width: 260px;
+  }
+  .tpz-ranking-position {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    background: rgba(29,185,84,0.14);
+    border: 1px solid rgba(29,185,84,0.34);
+    color: var(--g);
+    font-weight: 800;
+    font-size: 0.86rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .tpz-ranking-tipster-name {
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .tpz-ranking-meta {
+    font-size: 0.69rem;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+  .tpz-ranking-progress-track {
+    margin-top: 9px;
+    width: min(260px,100%);
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.08);
+    overflow: hidden;
+  }
+  .tpz-ranking-progress-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(29,185,84,0.95) 0%, rgba(115,255,160,0.95) 100%);
+  }
+  .tpz-ranking-stats {
+    min-width: 150px;
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 3px;
+  }
+  .tpz-ranking-roi {
+    font-family: 'Bebas Neue';
+    font-size: 1.45rem;
+    line-height: 1;
+    letter-spacing: 1px;
+  }
+  .tpz-ranking-yield {
+    font-size: 0.78rem;
+    font-weight: 800;
+  }
+  .tpz-ranking-units {
+    font-size: 0.69rem;
+  }
+  .tpz-ranking-profile-btn {
+    margin-top: 8px;
+    border: 1px solid rgba(29,185,84,0.45);
+    background: rgba(29,185,84,0.06);
+    color: var(--g);
+    border-radius: 8px;
+    padding: 7px 12px;
+    cursor: pointer;
+    font-size: 0.67rem;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+  }
   @media (max-width: 900px) {
     .tpz-proof-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
     .tpz-hero-glow { width: 330px; height: 330px; right: -110px; top: 8%; }
+    .tpz-market-kpis,
+    .tpz-rankings-summary-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
     .tpz-nav {
       padding: calc(10px + env(safe-area-inset-top)) 12px 10px !important;
       flex-direction: column;
@@ -332,6 +629,14 @@ const G = `
     .tpz-live-ticker-track { gap: 16px; font-size: 0.68rem; }
     .tpz-hero-cta-row button,
     .tpz-hero-secondary-btn { width: 100%; }
+    .tpz-market-kpis,
+    .tpz-rankings-summary-grid { grid-template-columns: 1fr; }
+    .tpz-ranking-card { flex-direction: column; }
+    .tpz-ranking-main { min-width: 100%; }
+    .tpz-ranking-progress-track { width: 100%; }
+    .tpz-ranking-stats { align-items: flex-start; text-align: left; width: 100%; }
+    .tpz-ranking-profile-btn { width: 100%; }
+    .tpz-market-highlight button { width: 100%; }
     .tpz-how-grid,
     .tpz-highlight-grid { grid-template-columns: 1fr; }
     .tpz-landing-cta-actions button { width: 100%; }
@@ -1315,10 +1620,10 @@ function HomeView({ setView, setPurchaseTarget, picks, setSelectedTipster }) {
             </p>
             <div className="tpz-hero-cta-row">
               <button onClick={()=>setView("marketplace")} style={{background:"var(--g)",color:"#000",border:"none",padding:"14px 28px",borderRadius:8,fontFamily:"'Barlow Condensed'",fontSize:"0.95rem",fontWeight:900,letterSpacing:2,cursor:"pointer"}}>
-                VER PICKS PREMIUM
+                VER PICKS GRATIS
               </button>
-              <button onClick={()=>setView("rankings")} className="tpz-hero-secondary-btn">
-                VER RANKINGS PRO
+              <button onClick={()=>setView("marketplace")} className="tpz-hero-secondary-btn">
+                VER PICKS PREMIUM
               </button>
             </div>
             <div className="tpz-proof-grid">
@@ -1521,18 +1826,89 @@ function PickCard({ pick, setView, setPurchaseTarget, setSelectedTipster }) {
 // ── MARKETPLACE ───────────────────────────────────────────────────────────────
 function MarketplaceView({ setView, setPurchaseTarget, picks, setSelectedTipster }) {
   const available = picks.filter(p => !isMatchStarted(p.time));
+  const freePicks = available.filter((pick)=>toSafeNumber(pick?.price,0) <= 0).length;
+  const avgOdds = available.length > 0
+    ? available.reduce((sum,pick)=>sum + toSafeNumber(pick?.odds,0),0) / available.length
+    : 0;
+  const maxBank = available.reduce((max,pick)=>Math.max(max, toSafeNumber(pick?.bank,0)),0);
+  const totalTipsters = new Set(available.map((pick)=>String(pick?.tipster||"").trim()).filter(Boolean)).size;
+  const totalLeagues = new Set(available.map((pick)=>String(pick?.league||"").trim()).filter(Boolean)).size;
+  const topSalesPick = [...available].sort((a,b)=>
+    Math.max(0,toSafeNumber(b?.salesCount,0)) - Math.max(0,toSafeNumber(a?.salesCount,0))
+  )[0] || null;
+  const topSalesCount = Math.max(0, toSafeNumber(topSalesPick?.salesCount,0));
   return (
-    <div className="tpz-page" style={{paddingTop:80,minHeight:"100vh",padding:"clamp(80px,12vw,100px) 5% 60px"}}>
-      <h1 style={{fontFamily:"'Bebas Neue'",fontSize:"clamp(2rem,5vw,3rem)",marginBottom:8}}>
-        Marketplace <span style={{color:"var(--g)"}}>de Picks</span>
-      </h1>
-      <p style={{color:"var(--muted)",marginBottom:32}}>{available.length} picks disponibles ahora</p>
+    <div className="tpz-page tpz-market-shell" style={{paddingTop:80,minHeight:"100vh",padding:"clamp(80px,12vw,100px) 5% 60px"}}>
+      <section className="tpz-market-hero">
+        <div className="tpz-market-badge-row">
+          <span className="tpz-market-badge">Mercado en vivo</span>
+          <span className="tpz-market-badge">Picks verificados</span>
+          <span className="tpz-market-badge">Actualización continua</span>
+        </div>
+        <h1 className="tpz-market-hero-title">
+          Marketplace de <span style={{color:"var(--g)"}}>Picks</span>
+        </h1>
+        <p className="tpz-market-hero-subtitle">
+          Encuentra picks premium con mejor contexto visual, métricas claras y acceso inmediato a los tickets más calientes del momento.
+        </p>
+        <div className="tpz-market-kpis">
+          <div className="tpz-market-kpi">
+            <div className="tpz-market-kpi-value">{available.length}</div>
+            <div className="tpz-market-kpi-label">Picks activos</div>
+          </div>
+          <div className="tpz-market-kpi">
+            <div className="tpz-market-kpi-value">{freePicks}</div>
+            <div className="tpz-market-kpi-label">Picks gratis</div>
+          </div>
+          <div className="tpz-market-kpi">
+            <div className="tpz-market-kpi-value">{formatOddsValue(avgOdds)}</div>
+            <div className="tpz-market-kpi-label">Momio promedio</div>
+          </div>
+          <div className="tpz-market-kpi">
+            <div className="tpz-market-kpi-value">{Math.round(maxBank)}%</div>
+            <div className="tpz-market-kpi-label">Bank máximo</div>
+          </div>
+        </div>
+        {topSalesPick && (
+          <div className="tpz-market-highlight">
+            <div>
+              <div className="tpz-market-highlight-title">🔥 Pick más vendido: {topSalesPick.match}</div>
+              <div className="tpz-market-highlight-meta">
+                {topSalesPick.tipster} · {topSalesCount} ventas · Momio {formatOddsValue(topSalesPick.odds)} · Bank {Math.round(Math.max(0,toSafeNumber(topSalesPick.bank,0)))}%
+              </div>
+            </div>
+            <button
+              className="tpz-ranking-profile-btn"
+              style={{marginTop:0}}
+              onClick={()=>{ setPurchaseTarget(topSalesPick); setView("purchase"); }}
+            >
+              Ir al pick top
+            </button>
+          </div>
+        )}
+      </section>
+
+      <div className="tpz-market-head">
+        <h2 className="tpz-market-title">Picks disponibles ahora</h2>
+        <button
+          onClick={()=>setView("rankings")}
+          className="tpz-hero-secondary-btn"
+          style={{padding:"9px 14px",fontSize:"0.73rem"}}
+        >
+          Ver rankings
+        </button>
+      </div>
       {available.length === 0 ? (
-        <div style={{textAlign:"center",padding:80,color:"var(--muted)"}}>
-          <div style={{fontSize:"3rem",marginBottom:16}}>📭</div>
-          <div>No hay picks disponibles en este momento</div>
+        <div className="tpz-market-empty">
+          <strong>📭 No hay picks disponibles por ahora</strong>
+          Vuelve en unos minutos para ver nuevas publicaciones premium de nuestros tipsters.
         </div>
       ) : (
+        <div style={{fontSize:"0.74rem",color:"var(--muted)",marginBottom:12}}>
+          {totalTipsters || 0} tipsters activos · {totalLeagues || 0} ligas disponibles
+        </div>
+      )}
+      {available.length > 0 && (
         <div className="tpz-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:16}}>
           {available.map((p,i)=><PickCard key={p._id||i} pick={p} setView={setView} setPurchaseTarget={setPurchaseTarget} setSelectedTipster={setSelectedTipster}/>)}
         </div>
@@ -1878,48 +2254,93 @@ function RankingsView({ setView, picks, setSelectedTipster }) {
     return 0;
   });
 
+  const avgWinRate = sorted.length > 0
+    ? Math.round(sorted.reduce((sum,tipster)=>sum + toSafeNumber(tipster.winRate,0),0) / sorted.length)
+    : 0;
+  const totalTrackedPicks = sorted.reduce((sum,tipster)=>sum + Math.max(0,toSafeNumber(tipster.picks,0)),0);
+  const bestRoi = sorted.length > 0 ? (sorted[0].roiText || formatSignedPercent(sorted[0].roiNum)) : "+0.0%";
+  const bestYield = sorted.length > 0 ? (sorted[0].yieldText || formatSignedPercent(sorted[0].yieldNum)) : "+0.0%";
+
   return (
-    <div className="tpz-page" style={{paddingTop:80,minHeight:"100vh",padding:"clamp(80px,12vw,100px) 5% 60px"}}>
-      <div style={{maxWidth:700,margin:"0 auto"}}>
-        <div style={{textAlign:"center",marginBottom:32}}>
-          <h1 style={{fontFamily:"'Bebas Neue'",fontSize:"clamp(2.5rem,6vw,4rem)",lineHeight:.95,marginBottom:12}}>
-            Top <span style={{color:"var(--g)"}}>Tipsters</span>
+    <div className="tpz-page tpz-rankings-shell" style={{paddingTop:80,minHeight:"100vh",padding:"clamp(80px,12vw,100px) 5% 60px"}}>
+      <div style={{maxWidth:760,margin:"0 auto"}}>
+        <section className="tpz-rankings-hero">
+          <h1 className="tpz-rankings-title">
+            Ranking de <span style={{color:"var(--g)"}}>Tipsters</span>
           </h1>
-          <p style={{color:"var(--muted)",fontSize:"0.88rem"}}>Rankings basados en resultados reales verificados</p>
-        </div>
-        <div className="tpz-ranking-filters" style={{display:"flex",gap:8,justifyContent:"center",marginBottom:28}}>
+          <p className="tpz-rankings-subtitle">
+            Performance real, actualizado por resultados verificados. Detecta rápido quién viene más sólido y con mejor gestión. Actualmente se trackean {totalTrackedPicks} picks entre todos los tipsters.
+          </p>
+          <div className="tpz-rankings-summary-grid">
+            <div className="tpz-rankings-summary-card">
+              <div className="tpz-rankings-summary-value">{sorted.length}</div>
+              <div className="tpz-rankings-summary-label">Tipsters activos</div>
+            </div>
+            <div className="tpz-rankings-summary-card">
+              <div className="tpz-rankings-summary-value">{avgWinRate}%</div>
+              <div className="tpz-rankings-summary-label">Win rate medio</div>
+            </div>
+            <div className="tpz-rankings-summary-card">
+              <div className="tpz-rankings-summary-value">{bestRoi}</div>
+              <div className="tpz-rankings-summary-label">Mejor ROI</div>
+            </div>
+            <div className="tpz-rankings-summary-card">
+              <div className="tpz-rankings-summary-value">{bestYield}</div>
+              <div className="tpz-rankings-summary-label">Mejor yield</div>
+            </div>
+          </div>
+        </section>
+        <div className="tpz-ranking-filters" style={{display:"flex",gap:8,justifyContent:"center",marginBottom:20}}>
           {[["roi","📊 ROI"],["winrate","🎯 Win Rate"],["picks","📈 Picks"]].map(([v,l])=>(
-            <button key={v} onClick={()=>setSortBy(v)} style={{background:sortBy===v?"var(--g)":"var(--d3)",color:sortBy===v?"#000":"var(--muted)",border:"1px solid var(--border)",padding:"8px 16px",borderRadius:6,cursor:"pointer",fontSize:"0.78rem",fontWeight:700}}>
+            <button
+              key={v}
+              onClick={()=>setSortBy(v)}
+              className={`tpz-ranking-filter-btn${sortBy===v?" active":""}`}
+            >
               {l}
             </button>
           ))}
         </div>
         {sorted.length === 0 ? (
-          <div style={{textAlign:"center",padding:60,color:"var(--muted)"}}>
+          <div style={{textAlign:"center",padding:60,color:"var(--muted)",background:"var(--d3)",border:"1px solid var(--border)",borderRadius:12}}>
             <div style={{fontSize:"3rem",marginBottom:16}}>🏆</div>
             <div>No hay tipsters registrados aún</div>
           </div>
-        ) : sorted.map((t,i)=>(
-          <div className="tpz-ranking-row" key={t._id||i} style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:12,padding:"20px",marginBottom:12,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
-            <div style={{display:"flex",alignItems:"center",gap:16}}>
-              <div style={{fontFamily:"'Bebas Neue'",fontSize:"1.8rem",color:"var(--gold)",width:32}}>{i+1}</div>
-              <button onClick={()=>openTipsterProfile(t)} style={{width:44,height:44,borderRadius:"50%",background:"var(--g)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Bebas Neue'",color:"#000",fontSize:"1.2rem",overflow:"hidden",flexShrink:0,padding:0,border:"none",cursor:"pointer"}}>
-                {t.avatar ? <img src={t.avatar} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/> : (t.name||"T")[0].toUpperCase()}
-              </button>
-              <div>
-                <button onClick={()=>openTipsterProfile(t)} style={{fontWeight:700,fontSize:"1rem",background:"none",border:"none",padding:0,color:"var(--text)",cursor:"pointer"}}>{t.name}</button>
-                <div style={{fontSize:"0.72rem",color:"var(--muted)"}}>{t.picks} picks · W/L/P {t.won}/{t.lost}/{t.push}</div>
-                <div style={{fontSize:"0.68rem",color:"var(--text-dim)",marginTop:2}}>Win Rate {t.winRate}% · Momio prom {formatOddsValue(t.avgOdds)}</div>
-              </div>
-            </div>
-            <div style={{textAlign:"right"}}>
-              <div style={{fontFamily:"'Bebas Neue'",fontSize:"1.55rem",color:t.roiNum>=0?"var(--g)":"#f44336"}}>{t.roiText||"+0%"}</div>
-              <div style={{fontSize:"0.62rem",color:"var(--muted)",letterSpacing:1}}>ROI</div>
-              <div style={{fontSize:"0.8rem",color:t.yieldNum>=0?"var(--g)":"#f44336",fontWeight:700,marginTop:2}}>YIELD {t.yieldText||"+0%"}</div>
-              <div style={{fontSize:"0.68rem",color:t.netUnits>=0?"var(--g)":"#f44336"}}>{formatSignedUnits(t.netUnits)}</div>
-            </div>
+        ) : (
+          <div className="tpz-ranking-list">
+            {sorted.map((t,i)=>{
+              const positionLabel = i===0 ? "🥇" : i===1 ? "🥈" : i===2 ? "🥉" : `#${i+1}`;
+              const topClass = i===0 ? "tpz-ranking-card-top-1" : i===1 ? "tpz-ranking-card-top-2" : i===2 ? "tpz-ranking-card-top-3" : "";
+              const winRateWidth = Math.max(0, Math.min(100, toSafeNumber(t.winRate,0)));
+              return (
+                <div key={t._id||i} className={`tpz-ranking-card ${topClass}`.trim()}>
+                  <div className="tpz-ranking-main">
+                    <div className="tpz-ranking-position">{positionLabel}</div>
+                    <button onClick={()=>openTipsterProfile(t)} style={{width:44,height:44,borderRadius:"50%",background:"var(--g)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Bebas Neue'",color:"#000",fontSize:"1.2rem",overflow:"hidden",flexShrink:0,padding:0,border:"none",cursor:"pointer"}}>
+                      {t.avatar ? <img src={t.avatar} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/> : (t.name||"T")[0].toUpperCase()}
+                    </button>
+                    <div>
+                      <button onClick={()=>openTipsterProfile(t)} className="tpz-ranking-tipster-name" style={{background:"none",border:"none",padding:0,cursor:"pointer"}}>
+                        {t.name}
+                      </button>
+                      <div className="tpz-ranking-meta">{t.picks} picks · W/L/P {t.won}/{t.lost}/{t.push}</div>
+                      <div className="tpz-ranking-meta">Momio prom {formatOddsValue(t.avgOdds)} · Win rate {t.winRate}%</div>
+                      <div className="tpz-ranking-progress-track">
+                        <div className="tpz-ranking-progress-fill" style={{width:`${winRateWidth}%`}} />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="tpz-ranking-stats">
+                    <div className="tpz-ranking-roi" style={{color:t.roiNum>=0?"var(--g)":"#f44336"}}>{t.roiText||"+0%"}</div>
+                    <div className="tpz-ranking-yield" style={{color:t.yieldNum>=0?"var(--g)":"#f44336"}}>YIELD {t.yieldText||"+0%"}</div>
+                    <div className="tpz-ranking-units" style={{color:t.netUnits>=0?"var(--g)":"#f44336"}}>{formatSignedUnits(t.netUnits)}</div>
+                    <button className="tpz-ranking-profile-btn" onClick={()=>openTipsterProfile(t)}>Ver tipster</button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        ))}
+        )}
       </div>
     </div>
   );
