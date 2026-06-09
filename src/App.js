@@ -1048,6 +1048,61 @@ function formatSignedUnits(value, fallback = "+0.00u") {
   const fixed = parsed.toFixed(2);
   return parsed >= 0 ? `+${fixed}u` : `${fixed}u`;
 }
+const APP_VIEW_KEYS = new Set([
+  "home",
+  "marketplace",
+  "purchase",
+  "rankings",
+  "login",
+  "register",
+  "forgot-password",
+  "reset-password",
+  "profile",
+  "become-pro",
+  "pro-panel",
+  "admin-panel",
+  "revenue-dashboard",
+  "tipster-profile"
+]);
+function normalizeAppView(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  return APP_VIEW_KEYS.has(normalized) ? normalized : "home";
+}
+function isFlowRouteActive() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    return Boolean(params.get("flow"));
+  } catch {
+    return false;
+  }
+}
+function getViewFromLocation() {
+  try {
+    const hashView = String(window.location.hash || "")
+      .replace(/^#\/?/, "")
+      .trim()
+      .toLowerCase();
+    if (APP_VIEW_KEYS.has(hashView)) return hashView;
+    const params = new URLSearchParams(window.location.search);
+    const queryView = String(params.get("view") || "").trim().toLowerCase();
+    if (APP_VIEW_KEYS.has(queryView)) return queryView;
+  } catch {}
+  return "home";
+}
+function syncLocationWithView(nextView, replace = false) {
+  try {
+    if (isFlowRouteActive()) return;
+    const normalized = normalizeAppView(nextView);
+    const nextHash = normalized === "home" ? "" : `#${normalized}`;
+    if ((window.location.hash || "") === nextHash) return;
+    const nextUrl = `${window.location.pathname}${window.location.search}${nextHash}`;
+    if (replace) {
+      window.history.replaceState({}, document.title, nextUrl);
+      return;
+    }
+    window.history.pushState({}, document.title, nextUrl);
+  } catch {}
+}
 
 const CLABE_WEIGHTS = [3, 7, 1];
 function normalizeDigits(value) {
@@ -4234,6 +4289,7 @@ function AdminPanel({ setView, user, picks }) {
   const [adminUsers, setAdminUsers] = useState([]);
   const [pendingPicks, setPendingPicks] = useState([]);
   const [allPicks, setAllPicks] = useState([]);
+  const [analyzingPending, setAnalyzingPending] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [payoutWeekOffset, setPayoutWeekOffset] = useState(0);
   const [payoutSummary, setPayoutSummary] = useState({ week: {}, totals: {}, payouts: [] });
@@ -4266,17 +4322,45 @@ function AdminPanel({ setView, user, picks }) {
   function resolvePickId(pickLike) {
     return String(pickLike?._id || pickLike?.id || "").trim();
   }
-
-  const loadData = () => {
+  const loadData = async () => {
+    setAdminActionError("");
     const token = localStorage.getItem("tpz_token");
+    if (!token) {
+      setAdminActionError("Sesión expirada. Inicia sesión nuevamente.");
+      return;
+    }
     const h = {"Authorization":"Bearer "+token};
-    fetch(BACKEND_URL+"/api/admin/users",{headers:h}).then(r=>r.json()).then(d=>{if(Array.isArray(d))setAdminUsers(d); else if (d?.error) setAdminActionError(d.error);}).catch(()=>setAdminActionError("No se pudo cargar usuarios"));
-    fetch(BACKEND_URL+"/api/admin/picks-pending",{headers:h}).then(r=>r.json()).then(d=>{if(Array.isArray(d))setPendingPicks(d); else if (d?.error) setAdminActionError(d.error);}).catch(()=>setAdminActionError("No se pudieron cargar picks pendientes"));
-    fetch(BACKEND_URL+"/api/admin/picks-all",{headers:h}).then(r=>r.json()).then(d=>{if(Array.isArray(d))setAllPicks(d); else if (d?.error) setAdminActionError(d.error);}).catch(()=>setAdminActionError("No se pudo cargar historial de picks"));
+    const endpoints = [
+      { key: "users", url: BACKEND_URL+"/api/admin/users", fallback: "No se pudo cargar usuarios" },
+      { key: "pending", url: BACKEND_URL+"/api/admin/picks-pending", fallback: "No se pudieron cargar picks pendientes" },
+      { key: "all", url: BACKEND_URL+"/api/admin/picks-all", fallback: "No se pudo cargar historial de picks" }
+    ];
+    const responses = await Promise.allSettled(
+      endpoints.map(async (endpointConfig)=>{
+        const response = await fetch(endpointConfig.url,{headers:h});
+        const payload = await response.json().catch(()=>null);
+        if(!response.ok) throw new Error(payload?.error || endpointConfig.fallback);
+        if(!Array.isArray(payload)) throw new Error(endpointConfig.fallback);
+        return { key: endpointConfig.key, payload };
+      })
+    );
+    let firstError = "";
+    responses.forEach((result)=>{
+      if(result.status === "fulfilled"){
+        if (result.value.key === "users") setAdminUsers(result.value.payload);
+        if (result.value.key === "pending") setPendingPicks(result.value.payload);
+        if (result.value.key === "all") setAllPicks(result.value.payload);
+        return;
+      }
+      if (!firstError) firstError = result.reason?.message || "No se pudo cargar panel admin";
+    });
+    if (firstError) setAdminActionError(firstError);
+    else setAdminActionError("");
   };
 
   useEffect(()=>{loadData();},[]);
   async function runAnalyzePendingPicks() {
+    if (analyzingPending) return;
     const token = localStorage.getItem("tpz_token");
     if (!token) {
       const message = "Sesión expirada. Inicia sesión nuevamente.";
@@ -4284,6 +4368,7 @@ function AdminPanel({ setView, user, picks }) {
       alert(message);
       return;
     }
+    setAnalyzingPending(true);
     try {
       const r = await fetch(BACKEND_URL+"/api/admin/analyze-picks",{
         method:"POST",
@@ -4295,9 +4380,11 @@ function AdminPanel({ setView, user, picks }) {
       const autoClosedCount = Number(data?.autoClosed ?? 0);
       const failedCount = Number(data?.failed ?? 0);
       alert(`Análisis IA completado · Analizados: ${analyzedCount} · Auto-cerrados: ${autoClosedCount} · Fallidos: ${failedCount}`);
-      loadData();
+      await loadData();
     } catch (e) {
       alert(e.message || "Error al analizar picks");
+    } finally {
+      setAnalyzingPending(false);
     }
   }
 
@@ -4330,7 +4417,7 @@ function AdminPanel({ setView, user, picks }) {
       setAdminActionNotice("Resultado guardado: "+getHumanResultLabel(appliedResult));
       alert("Resultado actualizado: "+getHumanResultLabel(appliedResult));
       setPendingPicks(prev=>prev.filter((p)=>resolvePickId(p)!==pickId));
-      loadData();
+      await loadData();
     } catch (e) {
       const message = e?.message || "Error de red al guardar resultado";
       setAdminActionError(message);
@@ -4370,7 +4457,7 @@ function AdminPanel({ setView, user, picks }) {
       const confidenceLabel = Number.isFinite(Number(confidenceValue)) ? ` (${confidenceValue}%)` : "";
       setAdminActionNotice("Dictamen IA actualizado: "+getPreliminaryVerdictLabel(verdict)+confidenceLabel);
       alert("Dictamen: "+getPreliminaryVerdictLabel(verdict)+confidenceLabel);
-      loadData();
+      await loadData();
     } catch (e) {
       const message = e?.message || "Error de red al analizar pick";
       setAdminActionError(message);
@@ -4384,8 +4471,26 @@ function AdminPanel({ setView, user, picks }) {
     if(!window.confirm("¿Resetear todas las estadísticas?"))return;
     setResetting(true);
     const token = localStorage.getItem("tpz_token");
-    await fetch(BACKEND_URL+"/api/admin/reset-stats",{method:"POST",headers:{"Authorization":"Bearer "+token}});
-    setResetting(false); alert("Stats reseteados"); loadData();
+    if (!token) {
+      setResetting(false);
+      const message = "Sesión expirada. Inicia sesión nuevamente.";
+      setAdminActionError(message);
+      alert(message);
+      return;
+    }
+    try {
+      const r = await fetch(BACKEND_URL+"/api/admin/reset-stats",{method:"POST",headers:{"Authorization":"Bearer "+token}});
+      const data = await r.json().catch(()=>null);
+      if(!r.ok || data?.success===false) throw new Error(data?.error || "No se pudieron resetear estadísticas");
+      alert("Stats reseteados");
+      await loadData();
+    } catch (e) {
+      const message = e?.message || "No se pudieron resetear estadísticas";
+      setAdminActionError(message);
+      alert(message);
+    } finally {
+      setResetting(false);
+    }
   }
   async function removeUserFromPlatform(targetUser) {
     const targetUserId = String(targetUser?._id || "");
@@ -4404,7 +4509,7 @@ function AdminPanel({ setView, user, picks }) {
       const data = await r.json().catch(()=>null);
       if(!r.ok || !data?.success) throw new Error(data?.error || "No se pudo eliminar usuario");
       alert(`${targetUser?.name || "Usuario"} eliminado correctamente.`);
-      loadData();
+      await loadData();
     } catch (e) {
       alert(e.message || "Error al eliminar usuario");
     }
@@ -4548,11 +4653,45 @@ function AdminPanel({ setView, user, picks }) {
     }
     return "Re-analiza para intentar un dictamen más claro o ciérralo manualmente.";
   }
+  function normalizePercentValue(value) {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return null;
+    const scaled = parsed > 0 && parsed <= 1 ? parsed * 100 : parsed;
+    return Math.max(0, Math.min(100, Math.round(scaled)));
+  }
+  function getPickReliability(pick) {
+    const breakdown = pick?.verification?.confidenceBreakdown || pick?.aiAnalysis?.confidenceBreakdown || {};
+    const extraction = normalizePercentValue(breakdown?.extractionQuality);
+    const eventMatch = normalizePercentValue(breakdown?.eventMatchQuality);
+    const official = normalizePercentValue(breakdown?.officialDataQuality);
+    return {
+      extraction: extraction!==null ? extraction : null,
+      eventMatch: eventMatch!==null ? eventMatch : null,
+      official: official!==null ? official : null
+    };
+  }
+  function getConfidenceTone(confidenceValue) {
+    const confidence = normalizePercentValue(confidenceValue);
+    if (!Number.isFinite(confidence) || confidence <= 0) return { label: "SIN DATO", color: "var(--muted)" };
+    if (confidence >= 85) return { label: "ALTA", color: "var(--g)" };
+    if (confidence >= 65) return { label: "MEDIA", color: "var(--gold)" };
+    return { label: "BAJA", color: "#ff9800" };
+  }
+  function getPrimaryEvidenceSource(pick) {
+    const evidenceItems = Array.isArray(pick?.verification?.evidence) && pick.verification.evidence.length>0
+      ? pick.verification.evidence
+      : (Array.isArray(pick?.aiAnalysis?.evidence) ? pick.aiAnalysis.evidence : []);
+    const sourceFromEvidence = evidenceItems.find((item)=>item && typeof item === "object" && item.provider)?.provider;
+    if (sourceFromEvidence) return String(sourceFromEvidence);
+    const providerTrace = Array.isArray(pick?.verification?.providerTrace) ? pick.verification.providerTrace : [];
+    const sourceFromTrace = providerTrace.find((item)=>item?.provider)?.provider;
+    return sourceFromTrace ? String(sourceFromTrace) : "sin fuente";
+  }
 
   function getPickConfidence(pick) {
     const value = pick?.verification?.confidence ?? pick?.verification?.preliminaryConfidence ?? pick?.aiAnalysis?.confianza;
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : 0;
+    const parsed = normalizePercentValue(value);
+    return parsed!==null ? parsed : 0;
   }
   function getPickAiArgument(pick) {
     return pick?.verification?.summary || pick?.verification?.closureReason || pick?.aiAnalysis?.detalle || "";
@@ -4816,7 +4955,7 @@ function AdminPanel({ setView, user, picks }) {
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10,marginBottom:16}}>
               <div style={{fontSize:"0.82rem",color:"var(--muted)"}}>{filteredPendingPicks.length} de {pendingPicks.length} picks pendientes</div>
               <div style={{display:"flex",gap:8}}>
-                <button onClick={runAnalyzePendingPicks} style={{background:"rgba(29,185,84,0.15)",border:"1px solid var(--g)",color:"var(--g)",padding:"6px 14px",borderRadius:6,cursor:"pointer",fontSize:"0.75rem",fontWeight:700}}>Analizar</button>
+                <button onClick={runAnalyzePendingPicks} disabled={analyzingPending} style={{background:"rgba(29,185,84,0.15)",border:"1px solid var(--g)",color:analyzingPending?"var(--muted)":"var(--g)",padding:"6px 14px",borderRadius:6,cursor:analyzingPending?"not-allowed":"pointer",fontSize:"0.75rem",fontWeight:700,opacity:analyzingPending?0.8:1}}>{analyzingPending?"Analizando...":"Analizar"}</button>
                 <button onClick={resetStats} disabled={resetting} style={{background:"rgba(244,67,54,0.15)",border:"1px solid #f44336",color:"#f44336",padding:"6px 14px",borderRadius:6,cursor:"pointer",fontSize:"0.75rem",fontWeight:700}}>{resetting?"...":"Reset Stats"}</button>
               </div>
             </div>
@@ -4871,8 +5010,9 @@ function AdminPanel({ setView, user, picks }) {
               const statusStyle = getVerificationStatusStyle(verification.status);
               const preliminaryVerdict = verification.preliminaryResult || verification.preliminaryVerdict || p.aiAnalysis?.resultado || "";
               const preliminaryConfidenceValue = verification.confidence ?? verification.preliminaryConfidence ?? p.aiAnalysis?.confianza;
-              const preliminaryConfidence = Number(preliminaryConfidenceValue);
-              const preliminaryConfidenceText = Number.isFinite(preliminaryConfidence) ? ` (${preliminaryConfidence}%)` : "";
+              const preliminaryConfidence = normalizePercentValue(preliminaryConfidenceValue);
+              const preliminaryConfidenceText = preliminaryConfidence!==null ? ` (${preliminaryConfidence}%)` : "";
+              const confidenceTone = getConfidenceTone(preliminaryConfidence);
               const evidenceItems = Array.isArray(verification.evidence) && verification.evidence.length>0
                 ? verification.evidence
                 : (Array.isArray(p.aiAnalysis?.evidence) ? p.aiAnalysis.evidence : []);
@@ -4881,6 +5021,26 @@ function AdminPanel({ setView, user, picks }) {
               const reopenedBy = verification.reopenedBy ? ` por ${verification.reopenedBy}` : "";
               const reopenedAt = verification.reopenedAt ? ` · ${new Date(verification.reopenedAt).toLocaleString("es-MX")}` : "";
               const nextStepHint = getNextStepHint(p);
+              const primarySource = getPrimaryEvidenceSource(p);
+              const reliability = getPickReliability(p);
+              const reliabilityItems = [
+                { key:"extraction", label:"Extracción", value:reliability.extraction, target:55 },
+                { key:"eventMatch", label:"Match evento", value:reliability.eventMatch, target:60 },
+                { key:"official", label:"Dato oficial", value:reliability.official, target:70 }
+              ];
+              const reliabilityValues = reliabilityItems.map((item)=>item.value).filter((value)=>Number.isFinite(value));
+              const reliabilityScore = reliabilityValues.length>0 ? Math.round(reliabilityValues.reduce((sum,value)=>sum+value,0)/reliabilityValues.length) : null;
+              const reliabilityTone = getConfidenceTone(reliabilityScore);
+              const verdictLabel = preliminaryVerdict ? getPreliminaryVerdictLabel(preliminaryVerdict) : "SIN VEREDICTO";
+              const verificationStatus = String(verification.status || "").toLowerCase();
+              const isReviewRequired = verificationStatus==="needs_review" || verificationStatus==="error" || verdictLabel==="REQUIERE REVISIÓN" || verdictLabel==="INCONCLUSO" || verdictLabel==="ERROR";
+              const nextActionTitle = verificationStatus==="pending_data"
+                ? "Esperar cierre oficial"
+                : isReviewRequired
+                  ? "Definir resultado manual"
+                  : preliminaryVerdict
+                    ? `Confirmar ${verdictLabel}`
+                    : "Re-analizar pick";
               const isPickActionBusy = pickActionInFlight.pickId === pickId;
               return (
                 <div key={pickId||i} style={{background:"linear-gradient(180deg, var(--d3) 0%, rgba(17,24,21,0.98) 100%)",border:"1px solid var(--border)",borderRadius:12,padding:14,marginBottom:10}}>
@@ -4910,17 +5070,47 @@ function AdminPanel({ setView, user, picks }) {
                       )}
                     </div>
                   </div>
-                  <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.12)",borderLeft:"3px solid var(--gold)",borderRadius:8,padding:"8px 10px",marginBottom:10}}>
-                    <div style={{fontSize:"0.64rem",color:"var(--gold)",fontWeight:700,letterSpacing:1,marginBottom:4}}>QUÉ HACER AHORA</div>
-                    <div style={{fontSize:"0.72rem",color:"var(--text-dim)",lineHeight:1.55}}>{nextStepHint}</div>
-                    {Number.isFinite(preliminaryConfidence) && (
-                      <div style={{fontSize:"0.66rem",color:"var(--gold)",marginTop:4}}>Confianza IA: {preliminaryConfidence}%</div>
-                    )}
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:8,marginBottom:10}}>
+                    <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:8,padding:"8px 10px"}}>
+                      <div style={{fontSize:"0.64rem",color:"var(--muted)",fontWeight:700,letterSpacing:0.8,marginBottom:4}}>DICTAMEN IA</div>
+                      <div style={{fontSize:"0.84rem",fontWeight:800,color:verdictLabel==="GANADO"?"var(--g)":verdictLabel==="PERDIDO"?"#f44336":verdictLabel==="PUSH"?"var(--gold)":isReviewRequired?"#ff9800":"var(--text)"}}>{verdictLabel}</div>
+                      <div style={{fontSize:"0.66rem",color:confidenceTone.color,marginTop:4}}>Confianza: {preliminaryConfidence!==null ? `${preliminaryConfidence}%` : "Sin dato"} · {confidenceTone.label}</div>
+                    </div>
+                    <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:8,padding:"8px 10px"}}>
+                      <div style={{fontSize:"0.64rem",color:"var(--muted)",fontWeight:700,letterSpacing:0.8,marginBottom:4}}>FIABILIDAD</div>
+                      <div style={{fontSize:"0.84rem",fontWeight:800,color:reliabilityTone.color}}>{reliabilityScore!==null ? `${reliabilityScore}%` : "Sin dato"} · {reliabilityTone.label}</div>
+                      <div style={{fontSize:"0.66rem",color:"var(--text-dim)",marginTop:4,overflowWrap:"anywhere"}}>Fuente principal: {primarySource}</div>
+                    </div>
+                    <div style={{background:isReviewRequired?"rgba(255,152,0,0.12)":"rgba(29,185,84,0.12)",border:`1px solid ${isReviewRequired ? "rgba(255,152,0,0.4)" : "rgba(29,185,84,0.35)"}`,borderRadius:8,padding:"8px 10px"}}>
+                      <div style={{fontSize:"0.64rem",color:isReviewRequired?"#ff9800":"var(--g)",fontWeight:700,letterSpacing:0.8,marginBottom:4}}>PRÓXIMA ACCIÓN</div>
+                      <div style={{fontSize:"0.78rem",color:isReviewRequired?"#ffb74d":"var(--g)",fontWeight:700}}>{nextActionTitle}</div>
+                      <div style={{fontSize:"0.66rem",color:"var(--text-dim)",lineHeight:1.45,marginTop:4}}>{nextStepHint}</div>
+                    </div>
+                  </div>
+                  <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:8,padding:"8px 10px",marginBottom:10}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:6}}>
+                      <div style={{fontSize:"0.64rem",color:"var(--muted)",fontWeight:700,letterSpacing:0.8}}>DESGLOSE DE FIABILIDAD</div>
+                      {preliminaryConfidenceText && <div style={{fontSize:"0.64rem",color:"var(--text-dim)"}}>Score IA{preliminaryConfidenceText}</div>}
+                    </div>
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:8}}>
+                      {reliabilityItems.map((item)=>(
+                        <div key={item.key} style={{background:"var(--d4)",border:"1px solid var(--border)",borderRadius:7,padding:"6px 8px"}}>
+                          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:"0.64rem",color:"var(--text-dim)",marginBottom:4}}>
+                            <span>{item.label}</span>
+                            <span>{item.value!==null ? `${item.value}%` : "N/D"}</span>
+                          </div>
+                          <div style={{height:6,borderRadius:999,background:"rgba(255,255,255,0.08)",overflow:"hidden"}}>
+                            <div style={{height:"100%",width:item.value!==null?`${item.value}%`:"0%",background:item.value===null?"rgba(107,128,120,0.35)":item.value>=item.target?"rgba(29,185,84,0.8)":item.value>=Math.max(45,item.target-10)?"rgba(245,197,66,0.85)":"rgba(255,152,0,0.85)",transition:"width 160ms ease"}} />
+                          </div>
+                          <div style={{fontSize:"0.6rem",color:"var(--muted)",marginTop:4}}>Meta ≥ {item.target}%</div>
+                        </div>
+                      ))}
+                    </div>
                     {p.result!=="pending" && (
-                      <div style={{fontSize:"0.66rem",color:"var(--g)",marginTop:4}}>Resultado oficial: {getHumanResultLabel(p.result)}</div>
+                      <div style={{fontSize:"0.66rem",color:"var(--g)",marginTop:8}}>Resultado oficial: {getHumanResultLabel(p.result)}</div>
                     )}
                     {String(verification.status||"").toLowerCase()==="reopened" && (
-                      <div style={{fontSize:"0.66rem",color:"#8b8bff",marginTop:4}}>Inconformidad / reapertura{reopenedBy}{reopenedAt}</div>
+                      <div style={{fontSize:"0.66rem",color:"#8b8bff",marginTop:8}}>Inconformidad / reapertura{reopenedBy}{reopenedAt}</div>
                     )}
                   </div>
                   <details style={{background:"var(--d4)",border:"1px solid var(--border)",borderRadius:8,padding:"8px 10px",marginBottom:10}}>
@@ -5659,7 +5849,7 @@ function TipsterProfileView({ setView, tipsterName, picks }) {
 }
 // ── APP ───────────────────────────────────────────────────────────────────────
 export default function App() {
-  const [view, setView] = useState("home");
+  const [view, setView] = useState(()=>isFlowRouteActive() ? "home" : getViewFromLocation());
   const [user, setUser] = useState(null);
   const [picks, setPicks] = useState([]);
   const [purchaseTarget, setPurchaseTarget] = useState(null);
@@ -5675,6 +5865,27 @@ export default function App() {
       fetch(BACKEND_URL+"/api/auth/me",{headers:{"Authorization":"Bearer "+token}})
         .then(r=>r.ok?r.json():null).then(d=>{if(d&&d._id)setUser(d);}).catch(()=>{});
     }
+  },[]);
+
+  useEffect(()=>{
+    if (isFlowRouteActive()) return;
+    const currentView = getViewFromLocation();
+    setView((prev)=>prev===currentView ? prev : currentView);
+    syncLocationWithView(currentView, true);
+  },[]);
+
+  useEffect(()=>{
+    function handleLocationNavigation() {
+      if (isFlowRouteActive()) return;
+      const currentView = getViewFromLocation();
+      setView((prev)=>prev===currentView ? prev : currentView);
+    }
+    window.addEventListener("hashchange", handleLocationNavigation);
+    window.addEventListener("popstate", handleLocationNavigation);
+    return ()=>{
+      window.removeEventListener("hashchange", handleLocationNavigation);
+      window.removeEventListener("popstate", handleLocationNavigation);
+    };
   },[]);
 
   useEffect(()=>{
@@ -5798,7 +6009,12 @@ export default function App() {
   },[user?._id]);
 
   function addPick(p){ setPicks(prev=>[p,...prev]); }
-  function gotoView(v){ setView(v); window.scrollTo({top:0,behavior:"smooth"}); }
+  function gotoView(v){
+    const nextView = normalizeAppView(v);
+    setView(nextView);
+    syncLocationWithView(nextView);
+    window.scrollTo({top:0,behavior:"smooth"});
+  }
   function openOwnTipsterSummary() {
     const tipsterName = String(user?.name || "").trim();
     if (!tipsterName) {
