@@ -1058,6 +1058,92 @@ function formatSignedUnits(value, fallback = "+0.00u") {
   const fixed = parsed.toFixed(2);
   return parsed >= 0 ? `+${fixed}u` : `${fixed}u`;
 }
+function getWeeklyCutStatusMeta(statusValue) {
+  const normalized = String(statusValue || "pending").toLowerCase();
+  if (normalized === "paid") {
+    return {
+      label: "PAGADO",
+      color: "var(--g)",
+      bg: "rgba(29,185,84,0.14)",
+      border: "1px solid rgba(29,185,84,0.35)"
+    };
+  }
+  if (normalized === "processing") {
+    return {
+      label: "PROCESANDO",
+      color: "#8b8bff",
+      bg: "rgba(100,100,255,0.14)",
+      border: "1px solid rgba(100,100,255,0.4)"
+    };
+  }
+  if (normalized === "failed") {
+    return {
+      label: "FALLIDO",
+      color: "#f44336",
+      bg: "rgba(244,67,54,0.14)",
+      border: "1px solid rgba(244,67,54,0.35)"
+    };
+  }
+  if (normalized === "no_sales") {
+    return {
+      label: "SIN VENTAS",
+      color: "var(--muted)",
+      bg: "rgba(107,128,120,0.14)",
+      border: "1px solid rgba(107,128,120,0.35)"
+    };
+  }
+  return {
+    label: "PENDIENTE",
+    color: "var(--gold)",
+    bg: "rgba(245,197,66,0.14)",
+    border: "1px solid rgba(245,197,66,0.35)"
+  };
+}
+function normalizeWeeklyCutsPayload(value) {
+  const payload = value && typeof value === "object" ? value : {};
+  const recentWeeksRaw = Array.isArray(payload?.recentWeeks) ? payload.recentWeeks : [];
+  const recentWeeks = recentWeeksRaw.map((row, index)=>({
+    weekStart: row?.weekStart || null,
+    weekEnd: row?.weekEnd || null,
+    label: String(row?.label || "").trim() || `Semana ${index+1}`,
+    salesCount: Math.max(0, toSafeNumber(row?.salesCount, 0)),
+    grossUsd: Math.max(0, toSafeNumber(row?.grossUsd, 0)),
+    payoutUsd: Math.max(0, toSafeNumber(row?.payoutUsd, 0)),
+    platformFeeUsd: Math.max(0, toSafeNumber(row?.platformFeeUsd, 0)),
+    status: String(row?.status || "pending").toLowerCase(),
+    stripeTransferId: String(row?.stripeTransferId || "").trim(),
+    approvedAt: row?.approvedAt || null,
+    errorMessage: String(row?.errorMessage || "").trim()
+  }));
+  const currentWeekRow = payload?.currentWeek && typeof payload.currentWeek === "object"
+    ? {
+        weekStart: payload.currentWeek?.weekStart || null,
+        weekEnd: payload.currentWeek?.weekEnd || null,
+        label: String(payload.currentWeek?.label || "").trim() || "Semana actual",
+        salesCount: Math.max(0, toSafeNumber(payload.currentWeek?.salesCount, 0)),
+        grossUsd: Math.max(0, toSafeNumber(payload.currentWeek?.grossUsd, 0)),
+        payoutUsd: Math.max(0, toSafeNumber(payload.currentWeek?.payoutUsd, 0)),
+        platformFeeUsd: Math.max(0, toSafeNumber(payload.currentWeek?.platformFeeUsd, 0)),
+        status: String(payload.currentWeek?.status || "pending").toLowerCase(),
+        stripeTransferId: String(payload.currentWeek?.stripeTransferId || "").trim(),
+        approvedAt: payload.currentWeek?.approvedAt || null,
+        errorMessage: String(payload.currentWeek?.errorMessage || "").trim()
+      }
+    : null;
+  const currentWeek = currentWeekRow || recentWeeks[0] || null;
+  const totalsPayload = payload?.totals && typeof payload.totals === "object" ? payload.totals : {};
+  return {
+    weeks: Math.max(1, toSafeNumber(payload?.weeks, recentWeeks.length || 1)),
+    currentWeek,
+    recentWeeks,
+    totals: {
+      salesCount: Math.max(0, toSafeNumber(totalsPayload?.salesCount, 0)),
+      grossUsd: Math.max(0, toSafeNumber(totalsPayload?.grossUsd, 0)),
+      payoutUsd: Math.max(0, toSafeNumber(totalsPayload?.payoutUsd, 0)),
+      platformFeeUsd: Math.max(0, toSafeNumber(totalsPayload?.platformFeeUsd, 0))
+    }
+  };
+}
 const APP_VIEW_KEYS = new Set([
   "home",
   "marketplace",
@@ -1952,37 +2038,118 @@ function HomeView({ setView, setPurchaseTarget, picks, setSelectedTipster }) {
     { label: "Win rate", value: `${winRate}%` },
     { label: "Momio promedio", value: formatOddsValue(avgOdds) }
   ];
+  const highlightedPick = featuredPicks[0] || activePicks[0] || null;
+  const trustChips = [
+    "Resultados auditables",
+    "Publicación diaria en vivo",
+    "Tipsters verificados",
+    "Cortes semanales"
+  ];
+  const tickerItems = [
+    `${activePicks.length} picks activos`,
+    `${totalTipsters || 0} tipsters operando`,
+    `${winRate}% de efectividad histórica`,
+    `Momio promedio ${formatOddsValue(avgOdds)}`,
+    `${totalSales} ventas registradas`,
+    highlightedPick ? `Top pick: ${highlightedPick.match || "mercado en vivo"}` : "Mercado premium actualizado cada minuto"
+  ];
+  const howItWorks = [
+    {
+      title: "Elige mercado",
+      desc: "Explora picks activos por liga, momio y tipo de apuesta."
+    },
+    {
+      title: "Compra y desbloquea",
+      desc: "Accede al ticket completo al instante con checkout seguro."
+    },
+    {
+      title: "Monitorea resultados",
+      desc: "Sigue rendimiento, historial y cortes semanales por tipster."
+    }
+  ];
 
   return (
     <div>
-      <section style={{padding:"clamp(90px,14vw,120px) 5% 34px",background:"var(--dark)"}}>
-        <div style={{maxWidth:980,margin:"0 auto"}}>
-          <span style={{fontSize:"0.72rem",color:"var(--g)",fontWeight:700,letterSpacing:1.4,textTransform:"uppercase"}}>The Pick Zone</span>
-          <h1 style={{fontFamily:"'Bebas Neue'",fontSize:"clamp(2rem,5vw,3.4rem)",lineHeight:1,margin:"10px 0 12px"}}>
-            Picks claros para decidir <span style={{color:"var(--g)"}}>rápido</span>
+      <section className="tpz-landing-hero tpz-hero" style={{position:"relative",padding:"clamp(92px,14vw,130px) 5% 42px"}}>
+        <div className="tpz-hero-glow" />
+        <div style={{maxWidth:1040,margin:"0 auto",position:"relative",zIndex:1}}>
+          <span className="tpz-hero-badge">Marketplace premium en tiempo real</span>
+          <h1 className="tpz-hero-title">
+            Convierte información en <span>picks rentables</span>
           </h1>
-          <p style={{fontSize:"0.9rem",color:"var(--text-dim)",maxWidth:720,lineHeight:1.6,marginBottom:18}}>
-            Explora picks activos, revisa tipsters top y entra al ticket en un solo flujo. Menos ruido, más decisión.
+          <p className="tpz-hero-subtitle">
+            Detecta oportunidades antes del kickoff, entra al ticket completo en segundos y sigue el rendimiento real de cada tipster con métricas transparentes.
           </p>
-          <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:18}}>
-            <button onClick={()=>setView("marketplace")} style={{background:"var(--g)",color:"#000",border:"none",padding:"12px 20px",borderRadius:8,fontFamily:"'Barlow Condensed'",fontSize:"0.9rem",fontWeight:900,letterSpacing:1.3,cursor:"pointer"}}>
-              VER MARKETPLACE
+          <div className="tpz-trust-row">
+            {trustChips.map((chip)=>(
+              <span key={chip} className="tpz-trust-chip">{chip}</span>
+            ))}
+          </div>
+          <div className="tpz-hero-cta-row">
+            <button onClick={()=>setView("marketplace")} className="tpz-pro-primary-btn" style={{padding:"13px 24px"}}>
+              VER PICKS EN VIVO
             </button>
-            <button onClick={()=>setView("rankings")} style={{background:"none",color:"var(--text)",border:"1px solid var(--border)",padding:"12px 20px",borderRadius:8,fontFamily:"'Barlow Condensed'",fontSize:"0.9rem",fontWeight:800,letterSpacing:1,cursor:"pointer"}}>
-              VER RANKINGS
+            <button onClick={()=>setView("rankings")} className="tpz-hero-secondary-btn">
+              REVISAR TIPSTERS TOP
             </button>
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:10}}>
+          <div className="tpz-proof-grid">
             {summaryCards.map((card)=>(
-              <div key={card.label} style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:"10px 12px"}}>
-                <div style={{fontFamily:"'Bebas Neue'",fontSize:"1.5rem",lineHeight:1,color:"var(--g)"}}>{card.value}</div>
-                <div style={{fontSize:"0.7rem",color:"var(--muted)"}}>{card.label}</div>
-              </div>
+              <article key={card.label} className="tpz-proof-card">
+                <div className="tpz-proof-value">{card.value}</div>
+                <div className="tpz-proof-label">{card.label}</div>
+              </article>
             ))}
           </div>
         </div>
       </section>
+      <section className="tpz-live-ticker">
+        <div className="tpz-live-ticker-track">
+          {[...tickerItems, ...tickerItems].map((item, index)=>(
+            <span key={`${item}-${index}`} className="tpz-live-ticker-item">
+              <span style={{color:"var(--g)"}}>●</span> {item}
+            </span>
+          ))}
+        </div>
+      </section>
 
+
+      <section className="tpz-section" style={{padding:"24px 5%",background:"var(--d2)"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:14}}>
+          <h2 style={{fontFamily:"'Bebas Neue'",fontSize:"clamp(1.75rem,3.8vw,2.5rem)",letterSpacing:1.2}}>
+            Tipsters <span style={{color:"var(--g)"}}>más consistentes</span>
+          </h2>
+          <button onClick={()=>setView("rankings")} className="tpz-hero-secondary-btn" style={{padding:"8px 12px",fontSize:"0.7rem"}}>
+            VER RANKINGS
+          </button>
+        </div>
+        {topTipsters.length > 0 ? (
+          <div className="tpz-highlight-grid">
+            {topTipsters.map((tipster)=>(
+              <article key={tipster.name} className="tpz-highlight-card">
+                <div className="tpz-highlight-head">
+                  <span className="tpz-highlight-name">{tipster.name}</span>
+                  <span className="tpz-highlight-roi">{tipster.winRate}%</span>
+                </div>
+                <div className="tpz-highlight-meta">
+                  {tipster.total} picks · {tipster.sales} ventas · {tipster.won}-{tipster.lost} W-L
+                </div>
+                <button
+                  className="tpz-highlight-btn"
+                  onClick={()=>{
+                    setSelectedTipster&&setSelectedTipster(tipster.name);
+                    setView("tipster-profile");
+                  }}
+                >
+                  VER PERFIL TIPSTER
+                </button>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div style={{fontSize:"0.8rem",color:"var(--muted)"}}>Aún no hay suficiente historial para mostrar destacados.</div>
+        )}
+      </section>
 
       <section className="tpz-section" style={{padding:"26px 5%",background:"var(--dark)"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:16}}>
@@ -2003,48 +2170,37 @@ function HomeView({ setView, setPurchaseTarget, picks, setSelectedTipster }) {
           <div style={{fontSize:"0.82rem",color:"var(--muted)"}}>No hay picks activos en este momento.</div>
         )}
       </section>
-
-      <section className="tpz-section" style={{padding:"22px 5%",background:"var(--d2)"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:14}}>
-          <h2 style={{fontFamily:"'Bebas Neue'",fontSize:"clamp(1.6rem,3.4vw,2.2rem)",letterSpacing:1.1}}>
-            Tipsters <span style={{color:"var(--g)"}}>más consistentes</span>
-          </h2>
-          <button onClick={()=>setView("rankings")} className="tpz-hero-secondary-btn" style={{padding:"8px 12px",fontSize:"0.7rem"}}>
-            VER RANKINGS
-          </button>
+      <section className="tpz-section" style={{padding:"24px 5%",background:"var(--dark)"}}>
+        <h2 style={{fontFamily:"'Bebas Neue'",fontSize:"clamp(1.7rem,3.6vw,2.3rem)",letterSpacing:1.1,marginBottom:12}}>
+          Cómo funciona <span style={{color:"var(--g)"}}>The Pick Zone</span>
+        </h2>
+        <div className="tpz-how-grid">
+          {howItWorks.map((step, index)=>(
+            <article key={step.title} className="tpz-how-card">
+              <span className="tpz-how-step">{index+1}</span>
+              <h3 className="tpz-how-title">{step.title}</h3>
+              <p className="tpz-how-desc">{step.desc}</p>
+            </article>
+          ))}
         </div>
-        {topTipsters.length > 0 ? (
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:10}}>
-            {topTipsters.slice(0,4).map((tipster)=>(
-              <button
-                key={tipster.name}
-                onClick={()=>{
-                  setSelectedTipster&&setSelectedTipster(tipster.name);
-                  setView("tipster-profile");
-                }}
-                style={{textAlign:"left",background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:"11px 12px",cursor:"pointer"}}
-              >
-                <div style={{fontWeight:800,fontSize:"0.84rem",marginBottom:3,color:"var(--text)"}}>{tipster.name}</div>
-                <div style={{fontSize:"0.7rem",color:"var(--muted)"}}>
-                  {tipster.winRate}% acierto · {tipster.total} picks
-                </div>
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div style={{fontSize:"0.8rem",color:"var(--muted)"}}>Aún no hay suficiente historial para mostrar destacados.</div>
-        )}
       </section>
 
       <section className="tpz-section" style={{padding:"22px 5% 52px",background:"var(--dark)"}}>
-        <div style={{background:"var(--d2)",border:"1px solid var(--border)",borderRadius:12,padding:"16px 18px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+        <div className="tpz-landing-cta">
           <div>
-            <h3 style={{fontFamily:"'Bebas Neue'",fontSize:"1.5rem",letterSpacing:1,marginBottom:2}}>¿Publicas picks?</h3>
-            <p style={{fontSize:"0.78rem",color:"var(--muted)"}}>Activa tu perfil Pro y empieza a monetizar tu ventaja.</p>
+            <h3 className="tpz-landing-cta-title">¿Publicas picks? monetiza tu edge</h3>
+            <p className="tpz-landing-cta-subtitle">
+              Activa tu perfil Pro para vender picks, cobrar cortes semanales y construir tu marca con estadísticas transparentes.
+            </p>
           </div>
-          <button onClick={()=>setView("become-pro")} style={{background:"var(--g)",color:"#000",border:"none",padding:"11px 18px",borderRadius:8,fontFamily:"'Barlow Condensed'",fontSize:"0.84rem",fontWeight:900,letterSpacing:1.5,cursor:"pointer"}}>
-            QUIERO SER PRO
-          </button>
+          <div className="tpz-landing-cta-actions">
+            <button onClick={()=>setView("become-pro")} className="tpz-pro-primary-btn" style={{padding:"11px 18px"}}>
+              QUIERO SER PRO
+            </button>
+            <button onClick={()=>setView("marketplace")} className="tpz-pro-secondary-btn" style={{padding:"11px 18px"}}>
+              EXPLORAR MARKETPLACE
+            </button>
+          </div>
         </div>
       </section>
     </div>
@@ -3184,6 +3340,9 @@ function ProPanelView({ user, addPick, setView, picks }) {
   const [playerName, setPlayerName] = useState("");
   const [propStatType, setPropStatType] = useState("points");
   const [bookmaker, setBookmaker] = useState("");
+  const [financeSummary, setFinanceSummary] = useState(()=>normalizeWeeklyCutsPayload(null));
+  const [financeLoading, setFinanceLoading] = useState(false);
+  const [financeError, setFinanceError] = useState("");
 
   const myPicks = picks.filter((p)=>p.tipster===user?.name);
   const wonPicks = myPicks.filter((p)=>String(p?.result || "").toLowerCase()==="won");
@@ -3232,6 +3391,34 @@ function ProPanelView({ user, addPick, setView, picks }) {
     { icon:"🏁", value:`${wonPicks.length}-${lostPicks.length}-${pushPicks.length}`, label:"Record W-L-P", meta:`Pendientes ${pendingResultPicks.length}` },
     { icon:"⚡", value:`${remaining}/3`, label:"Cupo Diario", meta:`${todayCount} publicados hoy` },
   ];
+  const financeCurrentWeek = financeSummary?.currentWeek || financeSummary?.recentWeeks?.[0] || null;
+  const financeRows = Array.isArray(financeSummary?.recentWeeks) ? financeSummary.recentWeeks.slice(0, 8) : [];
+  const financeCards = [
+    {
+      key: "payout",
+      label: "Pago semana",
+      value: formatMoney(financeCurrentWeek?.payoutUsd || 0),
+      caption: financeCurrentWeek?.label || "Semana actual"
+    },
+    {
+      key: "gross",
+      label: "Ventas semana",
+      value: formatMoney(financeCurrentWeek?.grossUsd || 0),
+      caption: `${Math.max(0, toSafeNumber(financeCurrentWeek?.salesCount, 0))} ventas`
+    },
+    {
+      key: "fee",
+      label: "Fee semana",
+      value: formatMoney(financeCurrentWeek?.platformFeeUsd || 0),
+      caption: "comisión plataforma"
+    },
+    {
+      key: "rolling",
+      label: "Pago últimas semanas",
+      value: formatMoney(financeSummary?.totals?.payoutUsd || 0),
+      caption: `${Math.max(0, toSafeNumber(financeSummary?.totals?.salesCount, 0))} ventas acumuladas`
+    }
+  ];
 
   function getResultChipClass(resultValue) {
     const normalized = String(resultValue || "pending").toLowerCase();
@@ -3269,6 +3456,30 @@ function ProPanelView({ user, addPick, setView, picks }) {
       mainOrder: idx,
     };
   }).filter(Boolean);
+  useEffect(()=>{
+    if (screen !== "dashboard") return;
+    const token = localStorage.getItem("tpz_token");
+    if (!token) return;
+    let cancelled = false;
+    async function loadFinanceSummary() {
+      setFinanceLoading(true);
+      setFinanceError("");
+      try {
+        const r = await fetch(BACKEND_URL+"/api/pro/finance/summary?weeks=8", {
+          headers: { "Authorization": "Bearer "+token }
+        });
+        const data = await r.json().catch(()=>null);
+        if (!r.ok || !data?.success) throw new Error(data?.error || "No se pudo cargar dashboard financiero");
+        if (!cancelled) setFinanceSummary(normalizeWeeklyCutsPayload(data?.weeklyCuts));
+      } catch (e) {
+        if (!cancelled) setFinanceError(e.message || "Error cargando cortes semanales");
+      } finally {
+        if (!cancelled) setFinanceLoading(false);
+      }
+    }
+    loadFinanceSummary();
+    return ()=>{ cancelled = true; };
+  },[screen,user?._id]);
 
   useEffect(()=>{
     if (screen !== "straight-league") return;
@@ -3727,6 +3938,51 @@ function ProPanelView({ user, addPick, setView, picks }) {
               <div className="tpz-pro-kpi-meta">{item.meta}</div>
             </div>
           ))}
+        </section>
+        <section className="tpz-pro-panel-card">
+          <div className="tpz-pro-card-head">
+            <h3>Dashboard financiero semanal</h3>
+            <span>{financeLoading ? "Actualizando..." : (financeCurrentWeek?.label || "Sin corte activo")}</span>
+          </div>
+          {financeError && (
+            <div style={{marginBottom:8,fontSize:"0.72rem",color:"#f44336"}}>
+              {financeError}
+            </div>
+          )}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:8}}>
+            {financeCards.map((card)=>(
+              <article key={card.key} style={{background:"var(--d4)",border:"1px solid var(--border)",borderRadius:9,padding:"10px 9px",textAlign:"center"}}>
+                <div style={{fontFamily:"'Bebas Neue'",fontSize:"1.5rem",lineHeight:1,color:"var(--g)"}}>{card.value}</div>
+                <div style={{fontSize:"0.63rem",color:"var(--text)",fontWeight:700,letterSpacing:1,textTransform:"uppercase",marginTop:3}}>{card.label}</div>
+                <div style={{fontSize:"0.64rem",color:"var(--muted)",marginTop:4}}>{card.caption}</div>
+              </article>
+            ))}
+          </div>
+          <div style={{marginTop:10,display:"flex",flexDirection:"column",gap:7}}>
+            {financeRows.length===0 ? (
+              <div className="tpz-pro-empty-state">Aún no hay ventas para generar cortes semanales.</div>
+            ) : financeRows.map((weekRow, index)=>{
+              const statusMeta = getWeeklyCutStatusMeta(weekRow?.status);
+              return (
+                <div key={`${weekRow?.label || "week"}-${index}`} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap",background:"var(--d4)",border:"1px solid var(--border)",borderRadius:8,padding:"8px 10px"}}>
+                  <div>
+                    <div style={{fontSize:"0.77rem",fontWeight:700}}>{weekRow?.label || "Semana"}</div>
+                    <div style={{fontSize:"0.67rem",color:"var(--text-dim)"}}>
+                      {Math.max(0, toSafeNumber(weekRow?.salesCount, 0))} ventas · Gross {formatMoney(weekRow?.grossUsd || 0)} · Fee {formatMoney(weekRow?.platformFeeUsd || 0)}
+                    </div>
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{background:statusMeta.bg,color:statusMeta.color,border:statusMeta.border,padding:"3px 10px",borderRadius:100,fontSize:"0.62rem",fontWeight:800,letterSpacing:1}}>
+                      {statusMeta.label}
+                    </span>
+                    <span style={{fontFamily:"'Bebas Neue'",fontSize:"1.2rem",lineHeight:1,color:"var(--gold)"}}>
+                      {formatMoney(weekRow?.payoutUsd || 0)}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </section>
 
         <section className="tpz-pro-insights-grid">
@@ -5430,7 +5686,7 @@ function RevenueDashboard({ setView }) {
 function TipsterProfileView({ setView, tipsterName, picks }) {
   const [tipster, setTipster] = useState(null);
   const [tipsterHistory, setTipsterHistory] = useState([]);
-  const [tipsterEarnings, setTipsterEarnings] = useState({ salesCount: 0, grossUsd: 0, payoutUsd: 0, platformFeeUsd: 0 });
+  const [tipsterWeeklyCuts, setTipsterWeeklyCuts] = useState(()=>normalizeWeeklyCutsPayload(null));
   const [summaryLoading, setSummaryLoading] = useState(false);
 
   useEffect(()=>{
@@ -5439,7 +5695,7 @@ function TipsterProfileView({ setView, tipsterName, picks }) {
     if (!normalizedName) {
       setTipster(null);
       setTipsterHistory([]);
-      setTipsterEarnings({ salesCount: 0, grossUsd: 0, payoutUsd: 0, platformFeeUsd: 0 });
+      setTipsterWeeklyCuts(normalizeWeeklyCutsPayload(null));
       return ()=>{ cancelled = true; };
     }
     async function loadTipsterSummary() {
@@ -5450,12 +5706,7 @@ function TipsterProfileView({ setView, tipsterName, picks }) {
         if (!cancelled && summaryResponse.ok && summaryData?.tipster) {
           setTipster(summaryData.tipster);
           setTipsterHistory(Array.isArray(summaryData.history) ? summaryData.history : []);
-          setTipsterEarnings({
-            salesCount: Math.max(0, toSafeNumber(summaryData?.earnings?.salesCount, 0)),
-            grossUsd: Math.max(0, toSafeNumber(summaryData?.earnings?.grossUsd, 0)),
-            payoutUsd: Math.max(0, toSafeNumber(summaryData?.earnings?.payoutUsd, 0)),
-            platformFeeUsd: Math.max(0, toSafeNumber(summaryData?.earnings?.platformFeeUsd, 0))
-          });
+          setTipsterWeeklyCuts(normalizeWeeklyCutsPayload(summaryData?.weeklyCuts));
           return;
         }
         const fallbackResponse = await fetch(BACKEND_URL+"/api/tipsters");
@@ -5463,8 +5714,10 @@ function TipsterProfileView({ setView, tipsterName, picks }) {
         if (!cancelled && Array.isArray(fallbackData)) {
           const fallbackTipster = fallbackData.find((item)=>String(item?.name || "").trim().toLowerCase()===normalizedName.toLowerCase());
           setTipster(fallbackTipster || null);
+          setTipsterWeeklyCuts(normalizeWeeklyCutsPayload(null));
         }
       } catch (_) {
+        if (!cancelled) setTipsterWeeklyCuts(normalizeWeeklyCutsPayload(null));
       } finally {
         if (!cancelled) setSummaryLoading(false);
       }
@@ -5510,10 +5763,10 @@ function TipsterProfileView({ setView, tipsterName, picks }) {
   const positiveRoi = !String(roiText||"").trim().startsWith("-");
   const positiveYield = !String(yieldText||"").trim().startsWith("-");
   const positiveNet = netUnits >= 0;
-  const salesCount = Math.max(0, toSafeNumber(tipsterEarnings?.salesCount, 0));
-  const grossUsd = Math.max(0, toSafeNumber(tipsterEarnings?.grossUsd, 0));
-  const payoutUsd = Math.max(0, toSafeNumber(tipsterEarnings?.payoutUsd, 0));
-  const platformFeeUsd = Math.max(0, toSafeNumber(tipsterEarnings?.platformFeeUsd, 0));
+  const weeklyCurrentCut = tipsterWeeklyCuts?.currentWeek || tipsterWeeklyCuts?.recentWeeks?.[0] || null;
+  const weeklyHistory = Array.isArray(tipsterWeeklyCuts?.recentWeeks) ? tipsterWeeklyCuts.recentWeeks.slice(0, 8) : [];
+  const weeklyTotals = tipsterWeeklyCuts?.totals || {};
+  const weeklyStatusMeta = getWeeklyCutStatusMeta(weeklyCurrentCut?.status);
   const headlineCards = [
     {
       key: "roi",
@@ -5546,9 +5799,30 @@ function TipsterProfileView({ setView, tipsterName, picks }) {
     { key:"risk", label:"Riesgo u", value:`${riskedUnits.toFixed(2)}u`, caption:"exposición acumulada", icon:"💼" }
   ];
   const earningsCards = [
-    { key:"payout", label:"Ganancia estimada", value:formatMoney(payoutUsd), caption:"pago estimado tipster (90%)" },
-    { key:"gross", label:"Facturación", value:formatMoney(grossUsd), caption:"ventas brutas acumuladas" },
-    { key:"sales", label:"Ventas", value:String(salesCount), caption:`comisión plataforma ${formatMoney(platformFeeUsd)}` }
+    {
+      key:"payout",
+      label:"Pago semana",
+      value:formatMoney(weeklyCurrentCut?.payoutUsd || 0),
+      caption: weeklyCurrentCut?.label || "semana actual"
+    },
+    {
+      key:"gross",
+      label:"Ventas semana",
+      value:formatMoney(weeklyCurrentCut?.grossUsd || 0),
+      caption: `${Math.max(0, toSafeNumber(weeklyCurrentCut?.salesCount, 0))} ventas`
+    },
+    {
+      key:"fee",
+      label:"Fee semana",
+      value:formatMoney(weeklyCurrentCut?.platformFeeUsd || 0),
+      caption: "comisión plataforma"
+    },
+    {
+      key:"window",
+      label:"Pago últimas semanas",
+      value:formatMoney(weeklyTotals?.payoutUsd || 0),
+      caption: `${Math.max(0, toSafeNumber(weeklyTotals?.salesCount, 0))} ventas acumuladas`
+    }
   ];
 
   function getPickResultMeta(resultValue) {
@@ -5638,8 +5912,8 @@ function TipsterProfileView({ setView, tipsterName, picks }) {
 
         <section style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:12,padding:"14px"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:10}}>
-            <h3 style={{fontFamily:"'Bebas Neue'",fontSize:"1.5rem",letterSpacing:1,margin:0}}>Ganancias <span style={{color:"var(--g)"}}>tipster</span></h3>
-            <span style={{fontSize:"0.7rem",color:"var(--muted)",letterSpacing:1.1,textTransform:"uppercase"}}>{summaryLoading?"actualizando...":"resumen acumulado"}</span>
+            <h3 style={{fontFamily:"'Bebas Neue'",fontSize:"1.5rem",letterSpacing:1,margin:0}}>Cortes <span style={{color:"var(--g)"}}>semanales</span></h3>
+            <span style={{fontSize:"0.7rem",color:"var(--muted)",letterSpacing:1.1,textTransform:"uppercase"}}>{summaryLoading?"actualizando...":(weeklyCurrentCut?.label || "semana actual")}</span>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:10}}>
             {earningsCards.map((metric)=>(
@@ -5649,6 +5923,39 @@ function TipsterProfileView({ setView, tipsterName, picks }) {
                 <div style={{fontSize:"0.66rem",color:"var(--muted)",marginTop:4}}>{metric.caption}</div>
               </article>
             ))}
+          </div>
+          <div style={{marginTop:10,display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap"}}>
+            <span style={{background:weeklyStatusMeta.bg,color:weeklyStatusMeta.color,border:weeklyStatusMeta.border,padding:"4px 11px",borderRadius:100,fontSize:"0.66rem",fontWeight:800,letterSpacing:1}}>
+              {weeklyStatusMeta.label}
+            </span>
+            <span style={{fontSize:"0.68rem",color:"var(--muted)"}}>
+              Total ventana: {Math.max(0, toSafeNumber(weeklyTotals?.salesCount, 0))} ventas · Gross {formatMoney(weeklyTotals?.grossUsd || 0)}
+            </span>
+          </div>
+          <div style={{marginTop:10,display:"flex",flexDirection:"column",gap:7}}>
+            {weeklyHistory.length===0 ? (
+              <div style={{fontSize:"0.72rem",color:"var(--muted)"}}>No hay cortes semanales disponibles todavía.</div>
+            ) : weeklyHistory.map((weekRow, index)=>{
+              const statusMeta = getWeeklyCutStatusMeta(weekRow?.status);
+              return (
+                <div key={`${weekRow?.label || "week"}-${index}`} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap",background:"rgba(12,19,16,0.9)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:8,padding:"8px 10px"}}>
+                  <div>
+                    <div style={{fontSize:"0.75rem",fontWeight:700}}>{weekRow?.label || "Semana"}</div>
+                    <div style={{fontSize:"0.67rem",color:"var(--text-dim)"}}>
+                      {Math.max(0, toSafeNumber(weekRow?.salesCount, 0))} ventas · Gross {formatMoney(weekRow?.grossUsd || 0)} · Fee {formatMoney(weekRow?.platformFeeUsd || 0)}
+                    </div>
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{background:statusMeta.bg,color:statusMeta.color,border:statusMeta.border,padding:"3px 10px",borderRadius:100,fontSize:"0.62rem",fontWeight:800,letterSpacing:1}}>
+                      {statusMeta.label}
+                    </span>
+                    <span style={{fontFamily:"'Bebas Neue'",fontSize:"1.2rem",lineHeight:1,color:"var(--gold)"}}>
+                      {formatMoney(weekRow?.payoutUsd || 0)}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </section>
 
