@@ -1935,189 +1935,106 @@ function HomeView({ setView, setPurchaseTarget, picks, setSelectedTipster }) {
       return b.total - a.total;
     })
     .slice(0,3);
-
-  const proofCards = [
-    [winRate+"%","Win rate real"],
-    [activePicks.length+"+","Picks premium"],
-    [formatOddsValue(avgOdds),"Momio prom"],
-    [totalSales+"+","Ventas"],
-  ];
-
-  const tickerItems = [
-    `${activePicks.length}+ picks premium activos`,
-    `${winRate}% de efectividad validada`,
-    `${totalTipsters || 1} tipsters compitiendo en rankings`,
-    `${totalSales}+ ventas registradas`,
-    "Pagos semanales 90/10 transparentes",
-  ];
-
-  const trustBadges = [
-    "✔ Resultados con dictamen IA + validación admin",
-    "✔ Tickets reales con capa de protección",
-    "✔ Compra segura y desbloqueo inmediato",
-    "✔ Tipsters con historial público verificable",
-  ];
-
-  const howSteps = [
-    { id: "01", title: "Explora picks top", desc: "Filtra por liga, momio y rendimiento para elegir oportunidades con ventaja." },
-    { id: "02", title: "Compra y desbloquea", desc: "Paga en segundos y obtén acceso al ticket premium del tipster." },
-    { id: "03", title: "Sigue resultados", desc: "Consulta dictamen final, historial y ranking actualizado en tiempo real." },
+  const featuredPicks = activePicks.slice(0,6);
+  const summaryCards = [
+    { label: "Picks activos", value: activePicks.length },
+    { label: "Tipsters activos", value: totalTipsters || 0 },
+    { label: "Win rate", value: `${winRate}%` },
+    { label: "Momio promedio", value: formatOddsValue(avgOdds) }
   ];
 
   return (
     <div>
-      <section className="tpz-hero tpz-landing-hero" style={{display:"flex",alignItems:"center",padding:"clamp(90px,14vw,120px) 5% 72px",position:"relative"}}>
-        <div className="tpz-hero-glow" />
-        <div className="tpz-two-col-grid" style={{position:"relative",zIndex:2,width:"100%",display:"grid",gridTemplateColumns:"minmax(0,1.25fr) minmax(220px,.75fr)",gap:16,alignItems:"stretch"}}>
-          <div className="tpz-hero-content" style={{animation:"fadeUp .7s ease both"}}>
-            <span className="tpz-hero-badge">⚡ Picks premium verificados</span>
-            <h1 className="tpz-hero-title">Domina el juego con <span>picks de élite</span></h1>
-            <p className="tpz-hero-subtitle">
-              Análisis de tipsters top, tickets reales y estadísticas transparentes para apostar con más confianza y control.
-            </p>
-            <div className="tpz-hero-cta-row">
-              <button onClick={()=>setView("marketplace")} style={{background:"var(--g)",color:"#000",border:"none",padding:"14px 28px",borderRadius:8,fontFamily:"'Barlow Condensed'",fontSize:"0.95rem",fontWeight:900,letterSpacing:2,cursor:"pointer"}}>
-                VER PICKS GRATIS
-              </button>
-              <button onClick={()=>setView("marketplace")} className="tpz-hero-secondary-btn">
-                VER PICKS PREMIUM
-              </button>
-            </div>
-            <div className="tpz-proof-grid">
-              {proofCards.map(([value,label])=>(
-                <div key={label} className="tpz-proof-card">
-                  <div className="tpz-proof-value">{value}</div>
-                  <div className="tpz-proof-label">{label}</div>
-                </div>
-              ))}
-            </div>
+      <section style={{padding:"clamp(90px,14vw,120px) 5% 34px",background:"var(--dark)"}}>
+        <div style={{maxWidth:980,margin:"0 auto"}}>
+          <span style={{fontSize:"0.72rem",color:"var(--g)",fontWeight:700,letterSpacing:1.4,textTransform:"uppercase"}}>The Pick Zone</span>
+          <h1 style={{fontFamily:"'Bebas Neue'",fontSize:"clamp(2rem,5vw,3.4rem)",lineHeight:1,margin:"10px 0 12px"}}>
+            Picks claros para decidir <span style={{color:"var(--g)"}}>rápido</span>
+          </h1>
+          <p style={{fontSize:"0.9rem",color:"var(--text-dim)",maxWidth:720,lineHeight:1.6,marginBottom:18}}>
+            Explora picks activos, revisa tipsters top y entra al ticket en un solo flujo. Menos ruido, más decisión.
+          </p>
+          <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:18}}>
+            <button onClick={()=>setView("marketplace")} style={{background:"var(--g)",color:"#000",border:"none",padding:"12px 20px",borderRadius:8,fontFamily:"'Barlow Condensed'",fontSize:"0.9rem",fontWeight:900,letterSpacing:1.3,cursor:"pointer"}}>
+              VER MARKETPLACE
+            </button>
+            <button onClick={()=>setView("rankings")} style={{background:"none",color:"var(--text)",border:"1px solid var(--border)",padding:"12px 20px",borderRadius:8,fontFamily:"'Barlow Condensed'",fontSize:"0.9rem",fontWeight:800,letterSpacing:1,cursor:"pointer"}}>
+              VER RANKINGS
+            </button>
           </div>
-
-          <div style={{background:"rgba(16,22,19,0.88)",border:"1px solid rgba(29,185,84,0.22)",borderRadius:12,padding:"14px 12px",alignSelf:"end"}}>
-            <div style={{fontSize:"0.66rem",color:"var(--g)",letterSpacing:1.5,fontWeight:700,marginBottom:8,textTransform:"uppercase"}}>
-              Radar en vivo
-            </div>
-            <div style={{fontFamily:"'Bebas Neue'",fontSize:"1.6rem",lineHeight:1,marginBottom:8}}>
-              {activePicks.length}+ picks abiertos
-            </div>
-            <div style={{fontSize:"0.73rem",lineHeight:1.5,color:"var(--text-dim)",marginBottom:10}}>
-              W/L: {wonCount}-{lostCount} · promedio de momio {formatOddsValue(avgOdds)}
-            </div>
-            {topTipsters.length > 0 ? topTipsters.map((tipster)=>(
-              <div key={tipster.name} style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:8,padding:"8px 9px",marginBottom:7}}>
-                <div style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"center"}}>
-                  <button onClick={()=>{ setSelectedTipster&&setSelectedTipster(tipster.name); setView("tipster-profile"); }} style={{background:"none",border:"none",padding:0,color:"var(--text)",fontWeight:700,fontSize:"0.8rem",cursor:"pointer",textAlign:"left"}}>
-                    {tipster.name}
-                  </button>
-                  <span style={{color:"var(--g)",fontFamily:"'Bebas Neue'",fontSize:"1.05rem",lineHeight:1}}>{tipster.winRate}%</span>
-                </div>
-                <div style={{fontSize:"0.66rem",color:"var(--muted)"}}>
-                  {tipster.won}-{tipster.lost} W/L · {tipster.sales} ventas
-                </div>
-              </div>
-            )) : (
-              <div style={{fontSize:"0.72rem",color:"var(--muted)"}}>Pronto verás aquí a los tipsters con mejor performance.</div>
-            )}
-          </div>
-        </div>
-      </section>
-
-      <section className="tpz-live-ticker">
-        <div className="tpz-live-ticker-track">
-          {[...tickerItems, ...tickerItems].map((item,index)=>(
-            <span key={`${item}-${index}`} className="tpz-live-ticker-item">● {item}</span>
-          ))}
-        </div>
-      </section>
-
-      <section className="tpz-section" style={{padding:"42px 5%",background:"var(--d2)"}}>
-        <div className="tpz-trust-row">
-          {trustBadges.map((badge)=><span key={badge} className="tpz-trust-chip">{badge}</span>)}
-        </div>
-        <h2 style={{fontFamily:"'Bebas Neue'",fontSize:"clamp(1.8rem,3.8vw,2.6rem)",letterSpacing:1.2,marginBottom:16}}>
-          ¿Cómo funciona <span style={{color:"var(--g)"}}>The Pick Zone</span>?
-        </h2>
-        <div className="tpz-how-grid">
-          {howSteps.map((step)=>(
-            <div key={step.id} className="tpz-how-card">
-              <span className="tpz-how-step">{step.id}</span>
-              <div className="tpz-how-title">{step.title}</div>
-              <div className="tpz-how-desc">{step.desc}</div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="tpz-section" style={{padding:"42px 5%",background:"var(--dark)"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:16}}>
-          <h2 style={{fontFamily:"'Bebas Neue'",fontSize:"clamp(1.8rem,3.8vw,2.6rem)",letterSpacing:1.2}}>
-            Tipsters <span style={{color:"var(--g)"}}>que están rompiendo</span>
-          </h2>
-          <button onClick={()=>setView("rankings")} className="tpz-hero-secondary-btn" style={{padding:"9px 14px",fontSize:"0.73rem"}}>
-            VER TABLA COMPLETA
-          </button>
-        </div>
-        {topTipsters.length > 0 ? (
-          <div className="tpz-highlight-grid">
-            {topTipsters.map((tipster)=>(
-              <div key={tipster.name} className="tpz-highlight-card">
-                <div className="tpz-highlight-head">
-                  <span className="tpz-highlight-name">{tipster.name}</span>
-                  <span className="tpz-highlight-roi">{tipster.winRate}%</span>
-                </div>
-                <div className="tpz-highlight-meta">
-                  {tipster.total} picks · {tipster.won}-{tipster.lost} W/L<br/>
-                  {tipster.sales} ventas acumuladas
-                </div>
-                <button
-                  className="tpz-highlight-btn"
-                  onClick={()=>{
-                    setSelectedTipster&&setSelectedTipster(tipster.name);
-                    setView("tipster-profile");
-                  }}
-                >
-                  Ver perfil del tipster
-                </button>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:10}}>
+            {summaryCards.map((card)=>(
+              <div key={card.label} style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:"10px 12px"}}>
+                <div style={{fontFamily:"'Bebas Neue'",fontSize:"1.5rem",lineHeight:1,color:"var(--g)"}}>{card.value}</div>
+                <div style={{fontSize:"0.7rem",color:"var(--muted)"}}>{card.label}</div>
               </div>
             ))}
           </div>
-        ) : (
-          <div style={{fontSize:"0.82rem",color:"var(--muted)"}}>Estamos recopilando historial para mostrar el top completo de tipsters.</div>
-        )}
+        </div>
       </section>
 
-      {activePicks.length > 0 && (
-        <section className="tpz-section" style={{padding:"42px 5%",background:"var(--d2)"}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:16}}>
-            <h2 style={{fontFamily:"'Bebas Neue'",fontSize:"clamp(1.8rem,3.8vw,2.6rem)",letterSpacing:1.2}}>
-              Picks <span style={{color:"var(--g)"}}>calientes de hoy</span>
-            </h2>
-            <button onClick={()=>setView("marketplace")} className="tpz-hero-secondary-btn" style={{padding:"9px 14px",fontSize:"0.73rem"}}>
-              VER MARKETPLACE
-            </button>
-          </div>
+
+      <section className="tpz-section" style={{padding:"26px 5%",background:"var(--dark)"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:16}}>
+          <h2 style={{fontFamily:"'Bebas Neue'",fontSize:"clamp(1.8rem,3.8vw,2.6rem)",letterSpacing:1.2}}>
+            Picks <span style={{color:"var(--g)"}}>de hoy</span>
+          </h2>
+          <button onClick={()=>setView("marketplace")} className="tpz-hero-secondary-btn" style={{padding:"9px 14px",fontSize:"0.73rem"}}>
+            VER TODO
+          </button>
+        </div>
+        {featuredPicks.length > 0 ? (
           <div className="tpz-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:14}}>
-            {activePicks.slice(0,6).map((pick,index)=>(
+            {featuredPicks.map((pick,index)=>(
               <PickCard key={pick._id||index} pick={pick} setView={setView} setPurchaseTarget={setPurchaseTarget} setSelectedTipster={setSelectedTipster}/>
             ))}
           </div>
-        </section>
-      )}
+        ) : (
+          <div style={{fontSize:"0.82rem",color:"var(--muted)"}}>No hay picks activos en este momento.</div>
+        )}
+      </section>
 
-      <section className="tpz-section" style={{padding:"24px 5% 56px",background:"var(--dark)"}}>
-        <div className="tpz-landing-cta">
-          <h3 className="tpz-landing-cta-title">¿Listo para pasar al siguiente nivel?</h3>
-          <p className="tpz-landing-cta-subtitle">
-            Sube tu propio rendimiento, sigue tipsters de alto impacto o conviértete en Pro para publicar picks y monetizar tu ventaja.
-          </p>
-          <div className="tpz-landing-cta-actions">
-            <button onClick={()=>setView("become-pro")} style={{background:"var(--g)",color:"#000",border:"none",padding:"12px 24px",borderRadius:8,fontFamily:"'Barlow Condensed'",fontSize:"0.9rem",fontWeight:900,letterSpacing:2,cursor:"pointer"}}>
-              QUIERO SER PRO
-            </button>
-            <button onClick={()=>setView("marketplace")} className="tpz-hero-secondary-btn" style={{padding:"11px 18px",fontSize:"0.8rem"}}>
-              EXPLORAR PICKS
-            </button>
+      <section className="tpz-section" style={{padding:"22px 5%",background:"var(--d2)"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:14}}>
+          <h2 style={{fontFamily:"'Bebas Neue'",fontSize:"clamp(1.6rem,3.4vw,2.2rem)",letterSpacing:1.1}}>
+            Tipsters <span style={{color:"var(--g)"}}>más consistentes</span>
+          </h2>
+          <button onClick={()=>setView("rankings")} className="tpz-hero-secondary-btn" style={{padding:"8px 12px",fontSize:"0.7rem"}}>
+            VER RANKINGS
+          </button>
+        </div>
+        {topTipsters.length > 0 ? (
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:10}}>
+            {topTipsters.slice(0,4).map((tipster)=>(
+              <button
+                key={tipster.name}
+                onClick={()=>{
+                  setSelectedTipster&&setSelectedTipster(tipster.name);
+                  setView("tipster-profile");
+                }}
+                style={{textAlign:"left",background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:"11px 12px",cursor:"pointer"}}
+              >
+                <div style={{fontWeight:800,fontSize:"0.84rem",marginBottom:3,color:"var(--text)"}}>{tipster.name}</div>
+                <div style={{fontSize:"0.7rem",color:"var(--muted)"}}>
+                  {tipster.winRate}% acierto · {tipster.total} picks
+                </div>
+              </button>
+            ))}
           </div>
+        ) : (
+          <div style={{fontSize:"0.8rem",color:"var(--muted)"}}>Aún no hay suficiente historial para mostrar destacados.</div>
+        )}
+      </section>
+
+      <section className="tpz-section" style={{padding:"22px 5% 52px",background:"var(--dark)"}}>
+        <div style={{background:"var(--d2)",border:"1px solid var(--border)",borderRadius:12,padding:"16px 18px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+          <div>
+            <h3 style={{fontFamily:"'Bebas Neue'",fontSize:"1.5rem",letterSpacing:1,marginBottom:2}}>¿Publicas picks?</h3>
+            <p style={{fontSize:"0.78rem",color:"var(--muted)"}}>Activa tu perfil Pro y empieza a monetizar tu ventaja.</p>
+          </div>
+          <button onClick={()=>setView("become-pro")} style={{background:"var(--g)",color:"#000",border:"none",padding:"11px 18px",borderRadius:8,fontFamily:"'Barlow Condensed'",fontSize:"0.84rem",fontWeight:900,letterSpacing:1.5,cursor:"pointer"}}>
+            QUIERO SER PRO
+          </button>
         </div>
       </section>
     </div>
@@ -2128,11 +2045,11 @@ function HomeView({ setView, setPurchaseTarget, picks, setSelectedTipster }) {
 function PickCard({ pick, setView, setPurchaseTarget, setSelectedTipster }) {
   const started = isMatchStarted(pick.time);
   const timeDisplay = pick.time && (pick.time.includes('T') || pick.time.includes('Z')) ? isoToLocal(pick.time) : pick.time;
-  const salesCount = Math.max(0, toSafeNumber(pick?.salesCount, 0));
   const teams = resolvePickTeams(pick);
   const hasTeamNames = teams.homeTeam && teams.awayTeam;
   const betTypeLabel = getPickBetTypeLabel(pick);
   const leagueLabel = String(pick?.league || "Liga");
+  const isFree = pick.price===0||pick.price==="0";
 
   if (started) return null;
 
@@ -2140,18 +2057,15 @@ function PickCard({ pick, setView, setPurchaseTarget, setSelectedTipster }) {
     <div className="tpz-card" style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,overflow:"hidden",transition:"all .25s"}}
       onMouseEnter={e=>e.currentTarget.style.borderColor="rgba(29,185,84,0.5)"}
       onMouseLeave={e=>e.currentTarget.style.borderColor="var(--border)"}>
-      <div style={{padding:"13px 18px",borderBottom:"1px solid var(--border)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+      <div style={{padding:"11px 14px",borderBottom:"1px solid var(--border)",display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
         <span style={{background:"rgba(29,185,84,0.1)",border:"1px solid rgba(29,185,84,0.2)",color:"var(--g)",padding:"3px 10px",borderRadius:100,fontSize:"0.67rem",fontWeight:700}}>
           {betTypeLabel} · {leagueLabel}
         </span>
-        <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:2}}>
-          <span style={{color:"var(--gold)",fontWeight:900,fontSize:"0.78rem"}}>MOMIO {pick.odds}</span>
-          <span style={{color:"var(--text-dim)",fontWeight:700,fontSize:"0.66rem"}}>BANK {pick.bank}% recomendado</span>
-        </div>
+        <span style={{color:"var(--gold)",fontWeight:900,fontSize:"0.78rem"}}>MOMIO {pick.odds}</span>
       </div>
-      <div className="tpz-card-content" style={{padding:18}}>
-        <div style={{fontSize:"0.72rem",color:"var(--text-dim)",marginBottom:5}}>{timeDisplay}</div>
-        <div style={{fontFamily:"'Barlow Condensed'",fontSize:"1.2rem",fontWeight:700,marginBottom:12}}>
+      <div className="tpz-card-content" style={{padding:"14px 14px 12px"}}>
+        <div style={{fontSize:"0.72rem",color:"var(--text-dim)",marginBottom:6}}>{timeDisplay}</div>
+        <div style={{fontFamily:"'Barlow Condensed'",fontSize:"1.14rem",fontWeight:700,marginBottom:10,lineHeight:1.2}}>
           {hasTeamNames ? (
             <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
               <TeamShield logoUrl={pick?.homeLogo} teamName={teams.homeTeam} size={22} />
@@ -2164,17 +2078,16 @@ function PickCard({ pick, setView, setPurchaseTarget, setSelectedTipster }) {
             <span>{pick.match}</span>
           )}
         </div>
-        <div style={{background:"var(--d4)",borderRadius:8,padding:"10px",textAlign:"center",border:"1px dashed rgba(29,185,84,0.2)",marginBottom:14}}>
-          <span style={{fontSize:"0.65rem",color:"var(--muted)",letterSpacing:1.5,textTransform:"uppercase"}}>Contenido exclusivo</span>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:12}}>
+          <button onClick={()=>{setSelectedTipster&&setSelectedTipster(pick.tipster);setView("tipster-profile");}} style={{background:"none",border:"none",padding:0,fontSize:"0.8rem",fontWeight:700,cursor:"pointer",color:"var(--g)",textAlign:"left"}}>
+            {pick.tipster}
+          </button>
+          <span style={{fontSize:"0.7rem",color:"var(--muted)"}}>BANK {Math.round(Math.max(0,toSafeNumber(pick?.bank,0)))}%</span>
         </div>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap",marginBottom:12}}>
-          <span style={{fontSize:"0.68rem",color:"var(--muted)"}}>{salesCount} ventas</span>
-          <PickShareButtons pick={pick} compact />
-        </div>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <div onClick={()=>{setSelectedTipster&&setSelectedTipster(pick.tipster);setView("tipster-profile");}} style={{fontSize:"0.82rem",fontWeight:700,cursor:"pointer",color:"var(--g)"}}>{pick.tipster}</div>
-          <button onClick={()=>{setPurchaseTarget(pick);setView("purchase");}} style={{background:pick.price===0||pick.price==="0"?"#17a347":"var(--g)",color:"#000",border:"none",padding:"10px 20px",borderRadius:6,fontFamily:"'Barlow Condensed'",fontSize:"0.88rem",fontWeight:900,letterSpacing:1.5,cursor:"pointer"}}>
-            {pick.price===0||pick.price==="0"?"GRATIS":`$${pick.price} USD`}
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
+          <span style={{fontSize:"0.68rem",color:"var(--text-dim)"}}>Entrada inmediata</span>
+          <button onClick={()=>{setPurchaseTarget(pick);setView("purchase");}} style={{background:isFree?"#17a347":"var(--g)",color:"#000",border:"none",padding:"9px 16px",borderRadius:6,fontFamily:"'Barlow Condensed'",fontSize:"0.84rem",fontWeight:900,letterSpacing:1.2,cursor:"pointer"}}>
+            {isFree?"GRATIS":`$${pick.price} USD`}
           </button>
         </div>
       </div>
@@ -2186,16 +2099,8 @@ function PickCard({ pick, setView, setPurchaseTarget, setSelectedTipster }) {
 function MarketplaceView({ setView, setPurchaseTarget, picks, setSelectedTipster }) {
   const available = picks.filter(p => !isMatchStarted(p.time));
   const freePicks = available.filter((pick)=>toSafeNumber(pick?.price,0) <= 0).length;
-  const avgOdds = available.length > 0
-    ? available.reduce((sum,pick)=>sum + toSafeNumber(pick?.odds,0),0) / available.length
-    : 0;
-  const maxBank = available.reduce((max,pick)=>Math.max(max, toSafeNumber(pick?.bank,0)),0);
   const totalTipsters = new Set(available.map((pick)=>String(pick?.tipster||"").trim()).filter(Boolean)).size;
   const totalLeagues = new Set(available.map((pick)=>String(pick?.league||"").trim()).filter(Boolean)).size;
-  const topSalesPick = [...available].sort((a,b)=>
-    Math.max(0,toSafeNumber(b?.salesCount,0)) - Math.max(0,toSafeNumber(a?.salesCount,0))
-  )[0] || null;
-  const topSalesCount = Math.max(0, toSafeNumber(topSalesPick?.salesCount,0));
   return (
     <div className="tpz-page tpz-market-shell" style={{paddingTop:80,minHeight:"100vh",padding:"clamp(80px,12vw,100px) 5% 60px"}}>
 
@@ -2216,7 +2121,7 @@ function MarketplaceView({ setView, setPurchaseTarget, picks, setSelectedTipster
         </div>
       ) : (
         <div style={{fontSize:"0.74rem",color:"var(--muted)",marginBottom:12}}>
-          {totalTipsters || 0} tipsters activos · {totalLeagues || 0} ligas disponibles
+          {totalTipsters || 0} tipsters activos · {totalLeagues || 0} ligas · {freePicks} picks gratis
         </div>
       )}
       {available.length > 0 && (
@@ -2224,54 +2129,6 @@ function MarketplaceView({ setView, setPurchaseTarget, picks, setSelectedTipster
           {available.map((p,i)=><PickCard key={p._id||i} pick={p} setView={setView} setPurchaseTarget={setPurchaseTarget} setSelectedTipster={setSelectedTipster}/>)}
         </div>
       )}
-      <section className="tpz-market-hero" style={{marginTop:available.length>0?22:0}}>
-        <div className="tpz-market-badge-row">
-          <span className="tpz-market-badge">Mercado en vivo</span>
-          <span className="tpz-market-badge">Picks verificados</span>
-          <span className="tpz-market-badge">Actualización continua</span>
-        </div>
-        <h1 className="tpz-market-hero-title">
-          Marketplace de <span style={{color:"var(--g)"}}>Picks</span>
-        </h1>
-        <p className="tpz-market-hero-subtitle">
-          Métricas clave y contexto premium para monitorear el mercado sin perder de vista los picks activos.
-        </p>
-        <div className="tpz-market-kpis">
-          <div className="tpz-market-kpi">
-            <div className="tpz-market-kpi-value">{available.length}</div>
-            <div className="tpz-market-kpi-label">Picks activos</div>
-          </div>
-          <div className="tpz-market-kpi">
-            <div className="tpz-market-kpi-value">{freePicks}</div>
-            <div className="tpz-market-kpi-label">Picks gratis</div>
-          </div>
-          <div className="tpz-market-kpi">
-            <div className="tpz-market-kpi-value">{formatOddsValue(avgOdds)}</div>
-            <div className="tpz-market-kpi-label">Momio promedio</div>
-          </div>
-          <div className="tpz-market-kpi">
-            <div className="tpz-market-kpi-value">{Math.round(maxBank)}%</div>
-            <div className="tpz-market-kpi-label">Bank máximo</div>
-          </div>
-        </div>
-        {topSalesPick && (
-          <div className="tpz-market-highlight">
-            <div>
-              <div className="tpz-market-highlight-title">Pick más vendido: {topSalesPick.match}</div>
-              <div className="tpz-market-highlight-meta">
-                {topSalesPick.tipster} · {topSalesCount} ventas · Momio {formatOddsValue(topSalesPick.odds)} · Bank {Math.round(Math.max(0,toSafeNumber(topSalesPick.bank,0)))}%
-              </div>
-            </div>
-            <button
-              className="tpz-ranking-profile-btn"
-              style={{marginTop:0}}
-              onClick={()=>{ setPurchaseTarget(topSalesPick); setView("purchase"); }}
-            >
-              Ir al pick top
-            </button>
-          </div>
-        )}
-      </section>
     </div>
   );
 }
@@ -4444,7 +4301,7 @@ function AdminPanel({ setView, user, picks }) {
     }
     setAdminActionError("");
     setAdminActionNotice("");
-    setPickActionInFlight({ pickId, action: "reanalyze" });
+    setPickActionInFlight({ pickId, action: "determine" });
     try {
       const r = await fetch(BACKEND_URL+"/api/picks/"+pickId+"/analyze",{method:"POST",headers:{"Authorization":"Bearer "+token}});
       const data = await r.json().catch(()=>null);
@@ -4455,13 +4312,26 @@ function AdminPanel({ setView, user, picks }) {
       const verdict = data.verification?.preliminaryResult || data.verification?.preliminaryVerdict || data.analysis?.resultado || "SIN RESULTADO";
       const confidenceValue = data.verification?.confidence ?? data.verification?.preliminaryConfidence ?? data.analysis?.confianza;
       const confidenceLabel = Number.isFinite(Number(confidenceValue)) ? ` (${confidenceValue}%)` : "";
-      setAdminActionNotice("Dictamen IA actualizado: "+getPreliminaryVerdictLabel(verdict)+confidenceLabel);
-      alert("Dictamen: "+getPreliminaryVerdictLabel(verdict)+confidenceLabel);
+      const resolvedResult = getOfficialResultFromVerdict(verdict);
+      if (resolvedResult) {
+        const saveResultResponse = await fetch(BACKEND_URL+"/api/picks/"+pickId+"/result",{
+          method:"PUT",
+          headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},
+          body:JSON.stringify({result:resolvedResult})
+        });
+        const saveResultData = await saveResultResponse.json().catch(()=>null);
+        if(!saveResultResponse.ok || saveResultData?.success===false){
+          const fallbackSaveError = saveResultResponse.status===401 ? "Sesión inválida. Inicia sesión nuevamente." : saveResultResponse.status===403 ? "Tu usuario no tiene permisos de admin." : "No se pudo guardar resultado determinado";
+          throw new Error(saveResultData?.error || fallbackSaveError);
+        }
+        setAdminActionNotice("Resultado determinado automáticamente: "+getHumanResultLabel(resolvedResult)+confidenceLabel);
+      } else {
+        setAdminActionNotice("Sin determinación automática: "+getPreliminaryVerdictLabel(verdict)+confidenceLabel);
+      }
       await loadData();
     } catch (e) {
       const message = e?.message || "Error de red al analizar pick";
       setAdminActionError(message);
-      alert(message);
     } finally {
       setPickActionInFlight({ pickId: "", action: "" });
     }
@@ -4628,6 +4498,13 @@ function AdminPanel({ setView, user, picks }) {
     if (verdict === "error") return "ERROR";
     if (verdict === "necesita_verificacion" || verdict === "needs_review" || verdict === "requires_review") return "REQUIERE REVISIÓN";
     return verdictValue ? String(verdictValue).toUpperCase() : "SIN VEREDICTO";
+  }
+  function getOfficialResultFromVerdict(verdictValue) {
+    const verdict = String(verdictValue || "").toLowerCase().replace(/\s+/g,"_");
+    if (verdict === "won" || verdict === "ganado") return "won";
+    if (verdict === "lost" || verdict === "perdido") return "lost";
+    if (verdict === "void" || verdict === "push" || verdict === "nulo") return "void";
+    return "";
   }
   function getNextStepHint(pick) {
     const verificationStatus = String(pick?.verification?.status || "").toLowerCase();
@@ -4955,14 +4832,14 @@ function AdminPanel({ setView, user, picks }) {
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10,marginBottom:16}}>
               <div style={{fontSize:"0.82rem",color:"var(--muted)"}}>{filteredPendingPicks.length} de {pendingPicks.length} picks pendientes</div>
               <div style={{display:"flex",gap:8}}>
-                <button onClick={runAnalyzePendingPicks} disabled={analyzingPending} style={{background:"rgba(29,185,84,0.15)",border:"1px solid var(--g)",color:analyzingPending?"var(--muted)":"var(--g)",padding:"6px 14px",borderRadius:6,cursor:analyzingPending?"not-allowed":"pointer",fontSize:"0.75rem",fontWeight:700,opacity:analyzingPending?0.8:1}}>{analyzingPending?"Analizando...":"Analizar"}</button>
+                <button onClick={runAnalyzePendingPicks} disabled={analyzingPending} style={{background:"rgba(29,185,84,0.15)",border:"1px solid var(--g)",color:analyzingPending?"var(--muted)":"var(--g)",padding:"6px 14px",borderRadius:6,cursor:analyzingPending?"not-allowed":"pointer",fontSize:"0.75rem",fontWeight:700,opacity:analyzingPending?0.8:1}}>{analyzingPending?"Determinando...":"Determinar lote"}</button>
                 <button onClick={resetStats} disabled={resetting} style={{background:"rgba(244,67,54,0.15)",border:"1px solid #f44336",color:"#f44336",padding:"6px 14px",borderRadius:6,cursor:"pointer",fontSize:"0.75rem",fontWeight:700}}>{resetting?"...":"Reset Stats"}</button>
               </div>
             </div>
             <div style={{background:"rgba(29,185,84,0.07)",border:"1px solid rgba(29,185,84,0.2)",borderRadius:10,padding:"10px 12px",marginBottom:12}}>
               <div style={{fontSize:"0.74rem",color:"var(--g)",fontWeight:700,marginBottom:4}}>Flujo simple</div>
               <div style={{fontSize:"0.72rem",color:"var(--text-dim)",lineHeight:1.55}}>
-                1) Si el partido ya terminó, usa <strong>Re-analizar</strong>. 2) Si dice <strong>Requiere revisión</strong>, confirma manualmente con <strong>GANADO / PERDIDO / PUSH</strong>.
+                Un clic en <strong>DETERMINAR RESULTADO</strong> investiga marcador oficial, aplica dictamen automático y guarda resultado cuando sea concluyente.
               </div>
             </div>
             <div style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:12,marginBottom:12}}>
@@ -5012,35 +4889,9 @@ function AdminPanel({ setView, user, picks }) {
               const preliminaryConfidenceValue = verification.confidence ?? verification.preliminaryConfidence ?? p.aiAnalysis?.confianza;
               const preliminaryConfidence = normalizePercentValue(preliminaryConfidenceValue);
               const preliminaryConfidenceText = preliminaryConfidence!==null ? ` (${preliminaryConfidence}%)` : "";
-              const confidenceTone = getConfidenceTone(preliminaryConfidence);
-              const evidenceItems = Array.isArray(verification.evidence) && verification.evidence.length>0
-                ? verification.evidence
-                : (Array.isArray(p.aiAnalysis?.evidence) ? p.aiAnalysis.evidence : []);
-              const aiArgument = getPickAiArgument(p);
               const betSummary = [p.bet?.marketType, p.bet?.selection].filter(Boolean).join(" · ");
-              const reopenedBy = verification.reopenedBy ? ` por ${verification.reopenedBy}` : "";
-              const reopenedAt = verification.reopenedAt ? ` · ${new Date(verification.reopenedAt).toLocaleString("es-MX")}` : "";
-              const nextStepHint = getNextStepHint(p);
-              const primarySource = getPrimaryEvidenceSource(p);
-              const reliability = getPickReliability(p);
-              const reliabilityItems = [
-                { key:"extraction", label:"Extracción", value:reliability.extraction, target:55 },
-                { key:"eventMatch", label:"Match evento", value:reliability.eventMatch, target:60 },
-                { key:"official", label:"Dato oficial", value:reliability.official, target:70 }
-              ];
-              const reliabilityValues = reliabilityItems.map((item)=>item.value).filter((value)=>Number.isFinite(value));
-              const reliabilityScore = reliabilityValues.length>0 ? Math.round(reliabilityValues.reduce((sum,value)=>sum+value,0)/reliabilityValues.length) : null;
-              const reliabilityTone = getConfidenceTone(reliabilityScore);
               const verdictLabel = preliminaryVerdict ? getPreliminaryVerdictLabel(preliminaryVerdict) : "SIN VEREDICTO";
-              const verificationStatus = String(verification.status || "").toLowerCase();
-              const isReviewRequired = verificationStatus==="needs_review" || verificationStatus==="error" || verdictLabel==="REQUIERE REVISIÓN" || verdictLabel==="INCONCLUSO" || verdictLabel==="ERROR";
-              const nextActionTitle = verificationStatus==="pending_data"
-                ? "Esperar cierre oficial"
-                : isReviewRequired
-                  ? "Definir resultado manual"
-                  : preliminaryVerdict
-                    ? `Confirmar ${verdictLabel}`
-                    : "Re-analizar pick";
+              const resolvedResult = getOfficialResultFromVerdict(preliminaryVerdict);
               const isPickActionBusy = pickActionInFlight.pickId === pickId;
               return (
                 <div key={pickId||i} style={{background:"linear-gradient(180deg, var(--d3) 0%, rgba(17,24,21,0.98) 100%)",border:"1px solid var(--border)",borderRadius:12,padding:14,marginBottom:10}}>
@@ -5070,77 +4921,21 @@ function AdminPanel({ setView, user, picks }) {
                       )}
                     </div>
                   </div>
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:8,marginBottom:10}}>
-                    <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:8,padding:"8px 10px"}}>
-                      <div style={{fontSize:"0.64rem",color:"var(--muted)",fontWeight:700,letterSpacing:0.8,marginBottom:4}}>DICTAMEN IA</div>
-                      <div style={{fontSize:"0.84rem",fontWeight:800,color:verdictLabel==="GANADO"?"var(--g)":verdictLabel==="PERDIDO"?"#f44336":verdictLabel==="PUSH"?"var(--gold)":isReviewRequired?"#ff9800":"var(--text)"}}>{verdictLabel}</div>
-                      <div style={{fontSize:"0.66rem",color:confidenceTone.color,marginTop:4}}>Confianza: {preliminaryConfidence!==null ? `${preliminaryConfidence}%` : "Sin dato"} · {confidenceTone.label}</div>
+                  <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:8,padding:"9px 10px",marginBottom:10}}>
+                    <div style={{fontSize:"0.66rem",color:"var(--muted)",fontWeight:700,letterSpacing:0.8,marginBottom:4}}>DETERMINACIÓN IA</div>
+                    <div style={{fontSize:"0.86rem",fontWeight:800,color:verdictLabel==="GANADO"?"var(--g)":verdictLabel==="PERDIDO"?"#f44336":verdictLabel==="PUSH"?"var(--gold)":"var(--text)"}}>
+                      {verdictLabel}{preliminaryConfidenceText}
                     </div>
-                    <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:8,padding:"8px 10px"}}>
-                      <div style={{fontSize:"0.64rem",color:"var(--muted)",fontWeight:700,letterSpacing:0.8,marginBottom:4}}>FIABILIDAD</div>
-                      <div style={{fontSize:"0.84rem",fontWeight:800,color:reliabilityTone.color}}>{reliabilityScore!==null ? `${reliabilityScore}%` : "Sin dato"} · {reliabilityTone.label}</div>
-                      <div style={{fontSize:"0.66rem",color:"var(--text-dim)",marginTop:4,overflowWrap:"anywhere"}}>Fuente principal: {primarySource}</div>
-                    </div>
-                    <div style={{background:isReviewRequired?"rgba(255,152,0,0.12)":"rgba(29,185,84,0.12)",border:`1px solid ${isReviewRequired ? "rgba(255,152,0,0.4)" : "rgba(29,185,84,0.35)"}`,borderRadius:8,padding:"8px 10px"}}>
-                      <div style={{fontSize:"0.64rem",color:isReviewRequired?"#ff9800":"var(--g)",fontWeight:700,letterSpacing:0.8,marginBottom:4}}>PRÓXIMA ACCIÓN</div>
-                      <div style={{fontSize:"0.78rem",color:isReviewRequired?"#ffb74d":"var(--g)",fontWeight:700}}>{nextActionTitle}</div>
-                      <div style={{fontSize:"0.66rem",color:"var(--text-dim)",lineHeight:1.45,marginTop:4}}>{nextStepHint}</div>
+                    <div style={{fontSize:"0.68rem",color:"var(--text-dim)",marginTop:4}}>
+                      {resolvedResult
+                        ? `Resultado sugerido: ${getHumanResultLabel(resolvedResult)}`
+                        : "Sin resultado concluyente todavía. Intenta determinar nuevamente cuando cierre el partido."}
                     </div>
                   </div>
-                  <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:8,padding:"8px 10px",marginBottom:10}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:6}}>
-                      <div style={{fontSize:"0.64rem",color:"var(--muted)",fontWeight:700,letterSpacing:0.8}}>DESGLOSE DE FIABILIDAD</div>
-                      {preliminaryConfidenceText && <div style={{fontSize:"0.64rem",color:"var(--text-dim)"}}>Score IA{preliminaryConfidenceText}</div>}
-                    </div>
-                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:8}}>
-                      {reliabilityItems.map((item)=>(
-                        <div key={item.key} style={{background:"var(--d4)",border:"1px solid var(--border)",borderRadius:7,padding:"6px 8px"}}>
-                          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:"0.64rem",color:"var(--text-dim)",marginBottom:4}}>
-                            <span>{item.label}</span>
-                            <span>{item.value!==null ? `${item.value}%` : "N/D"}</span>
-                          </div>
-                          <div style={{height:6,borderRadius:999,background:"rgba(255,255,255,0.08)",overflow:"hidden"}}>
-                            <div style={{height:"100%",width:item.value!==null?`${item.value}%`:"0%",background:item.value===null?"rgba(107,128,120,0.35)":item.value>=item.target?"rgba(29,185,84,0.8)":item.value>=Math.max(45,item.target-10)?"rgba(245,197,66,0.85)":"rgba(255,152,0,0.85)",transition:"width 160ms ease"}} />
-                          </div>
-                          <div style={{fontSize:"0.6rem",color:"var(--muted)",marginTop:4}}>Meta ≥ {item.target}%</div>
-                        </div>
-                      ))}
-                    </div>
-                    {p.result!=="pending" && (
-                      <div style={{fontSize:"0.66rem",color:"var(--g)",marginTop:8}}>Resultado oficial: {getHumanResultLabel(p.result)}</div>
-                    )}
-                    {String(verification.status||"").toLowerCase()==="reopened" && (
-                      <div style={{fontSize:"0.66rem",color:"#8b8bff",marginTop:8}}>Inconformidad / reapertura{reopenedBy}{reopenedAt}</div>
-                    )}
-                  </div>
-                  <details style={{background:"var(--d4)",border:"1px solid var(--border)",borderRadius:8,padding:"8px 10px",marginBottom:10}}>
-                    <summary style={{fontSize:"0.68rem",color:"var(--muted)",cursor:"pointer",fontWeight:700}}>Ver detalle técnico IA</summary>
-                    {betSummary && <div style={{fontSize:"0.68rem",color:"var(--text-dim)",marginTop:8}}>Mercado: {betSummary}</div>}
-                    {aiArgument && (
-                      <div style={{marginTop:6}}>
-                        <div style={{fontSize:"0.66rem",color:"var(--g)",fontWeight:700}}>Argumento IA</div>
-                        <div style={{fontSize:"0.68rem",color:"var(--text-dim)",lineHeight:1.5}}>{aiArgument}</div>
-                      </div>
-                    )}
-                    <div style={{marginTop:6}}>
-                      <div style={{fontSize:"0.66rem",color:"var(--muted)",marginBottom:4}}>Evidencia ({evidenceItems.length})</div>
-                      {evidenceItems.length>0 ? (
-                        <>
-                          {evidenceItems.slice(0,3).map((item,idx)=>(
-                            <div key={idx} style={{fontSize:"0.68rem",color:"var(--text-dim)",lineHeight:1.55}}>• {getEvidenceText(item)}</div>
-                          ))}
-                          {evidenceItems.length>3 && <div style={{fontSize:"0.68rem",color:"var(--muted)"}}>+{evidenceItems.length-3} evidencias más</div>}
-                        </>
-                      ) : (
-                        <div style={{fontSize:"0.68rem",color:"var(--muted)"}}>Sin evidencia disponible</div>
-                      )}
-                    </div>
-                  </details>
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:8,marginTop:10}}>
-                    <button disabled={isPickActionBusy} onClick={()=>approveResult(pickId,"won")} style={{background:"rgba(29,185,84,0.15)",border:"1px solid var(--g)",color:"var(--g)",padding:"8px 10px",borderRadius:6,cursor:isPickActionBusy?"not-allowed":"pointer",fontWeight:700,fontSize:"0.75rem",width:"100%",opacity:isPickActionBusy?0.7:1}}>{isPickActionBusy && pickActionInFlight.action==="won" ? "Guardando..." : "GANADO"}</button>
-                    <button disabled={isPickActionBusy} onClick={()=>approveResult(pickId,"lost")} style={{background:"rgba(244,67,54,0.15)",border:"1px solid #f44336",color:"#f44336",padding:"8px 10px",borderRadius:6,cursor:isPickActionBusy?"not-allowed":"pointer",fontWeight:700,fontSize:"0.75rem",width:"100%",opacity:isPickActionBusy?0.7:1}}>{isPickActionBusy && pickActionInFlight.action==="lost" ? "Guardando..." : "PERDIDO"}</button>
-                    <button disabled={isPickActionBusy} onClick={()=>approveResult(pickId,"void")} style={{background:"rgba(245,197,66,0.15)",border:"1px solid var(--gold)",color:"var(--gold)",padding:"8px 10px",borderRadius:6,cursor:isPickActionBusy?"not-allowed":"pointer",fontWeight:700,fontSize:"0.75rem",width:"100%",opacity:isPickActionBusy?0.7:1}}>{isPickActionBusy && pickActionInFlight.action==="void" ? "Guardando..." : "PUSH"}</button>
-                    <button disabled={isPickActionBusy} onClick={()=>reanalyze(pickId)} style={{background:"rgba(100,100,255,0.15)",border:"1px solid #6464ff",color:"#8b8bff",padding:"8px 10px",borderRadius:6,cursor:isPickActionBusy?"not-allowed":"pointer",fontWeight:700,fontSize:"0.75rem",width:"100%",opacity:isPickActionBusy?0.7:1}}>{isPickActionBusy && pickActionInFlight.action==="reanalyze" ? "Analizando..." : "RE-ANALIZAR"}</button>
+                  <div style={{display:"flex",justifyContent:"flex-end",marginTop:10}}>
+                    <button disabled={isPickActionBusy} onClick={()=>reanalyze(pickId)} style={{background:"rgba(29,185,84,0.15)",border:"1px solid var(--g)",color:"var(--g)",padding:"9px 14px",borderRadius:6,cursor:isPickActionBusy?"not-allowed":"pointer",fontWeight:800,fontSize:"0.76rem",width:"100%",opacity:isPickActionBusy?0.7:1}}>
+                      {isPickActionBusy && pickActionInFlight.action==="determine" ? "Determinando..." : "DETERMINAR RESULTADO"}
+                    </button>
                   </div>
                 </div>
               );
@@ -5624,19 +5419,51 @@ function RevenueDashboard({ setView }) {
 // ── TIPSTER PROFILE ───────────────────────────────────────────────────────────
 function TipsterProfileView({ setView, tipsterName, picks }) {
   const [tipster, setTipster] = useState(null);
+  const [tipsterHistory, setTipsterHistory] = useState([]);
+  const [tipsterEarnings, setTipsterEarnings] = useState({ salesCount: 0, grossUsd: 0, payoutUsd: 0, platformFeeUsd: 0 });
+  const [summaryLoading, setSummaryLoading] = useState(false);
 
   useEffect(()=>{
-    fetch(BACKEND_URL+"/api/tipsters")
-      .then(r=>r.json())
-      .then(data=>{
-        if(Array.isArray(data)){
-          const t = data.find(u=>u.name===tipsterName);
-          setTipster(t||null);
+    let cancelled = false;
+    const normalizedName = String(tipsterName || "").trim();
+    if (!normalizedName) {
+      setTipster(null);
+      setTipsterHistory([]);
+      setTipsterEarnings({ salesCount: 0, grossUsd: 0, payoutUsd: 0, platformFeeUsd: 0 });
+      return ()=>{ cancelled = true; };
+    }
+    async function loadTipsterSummary() {
+      setSummaryLoading(true);
+      try {
+        const summaryResponse = await fetch(BACKEND_URL+`/api/tipsters/${encodeURIComponent(normalizedName)}/summary`);
+        const summaryData = await summaryResponse.json().catch(()=>null);
+        if (!cancelled && summaryResponse.ok && summaryData?.tipster) {
+          setTipster(summaryData.tipster);
+          setTipsterHistory(Array.isArray(summaryData.history) ? summaryData.history : []);
+          setTipsterEarnings({
+            salesCount: Math.max(0, toSafeNumber(summaryData?.earnings?.salesCount, 0)),
+            grossUsd: Math.max(0, toSafeNumber(summaryData?.earnings?.grossUsd, 0)),
+            payoutUsd: Math.max(0, toSafeNumber(summaryData?.earnings?.payoutUsd, 0)),
+            platformFeeUsd: Math.max(0, toSafeNumber(summaryData?.earnings?.platformFeeUsd, 0))
+          });
+          return;
         }
-      }).catch(()=>{});
+        const fallbackResponse = await fetch(BACKEND_URL+"/api/tipsters");
+        const fallbackData = await fallbackResponse.json().catch(()=>null);
+        if (!cancelled && Array.isArray(fallbackData)) {
+          const fallbackTipster = fallbackData.find((item)=>String(item?.name || "").trim().toLowerCase()===normalizedName.toLowerCase());
+          setTipster(fallbackTipster || null);
+        }
+      } catch (_) {
+      } finally {
+        if (!cancelled) setSummaryLoading(false);
+      }
+    }
+    loadTipsterSummary();
+    return ()=>{ cancelled = true; };
   },[tipsterName]);
-
-  const myPicks = picks.filter(p=>p.tipster===tipsterName);
+  const fallbackPicks = picks.filter((pick)=>String(pick?.tipster || "").trim()===String(tipsterName || "").trim());
+  const myPicks = tipsterHistory.length>0 ? tipsterHistory : fallbackPicks;
   const recentPicks = [...myPicks]
     .sort((a,b)=>{
       const timeA = new Date(a?.createdAt || a?.updatedAt || a?.timeRaw || a?.time || 0).getTime();
@@ -5673,6 +5500,10 @@ function TipsterProfileView({ setView, tipsterName, picks }) {
   const positiveRoi = !String(roiText||"").trim().startsWith("-");
   const positiveYield = !String(yieldText||"").trim().startsWith("-");
   const positiveNet = netUnits >= 0;
+  const salesCount = Math.max(0, toSafeNumber(tipsterEarnings?.salesCount, 0));
+  const grossUsd = Math.max(0, toSafeNumber(tipsterEarnings?.grossUsd, 0));
+  const payoutUsd = Math.max(0, toSafeNumber(tipsterEarnings?.payoutUsd, 0));
+  const platformFeeUsd = Math.max(0, toSafeNumber(tipsterEarnings?.platformFeeUsd, 0));
   const headlineCards = [
     {
       key: "roi",
@@ -5703,6 +5534,11 @@ function TipsterProfileView({ setView, tipsterName, picks }) {
     { key:"push", label:"Push", value:String(push), caption:"void/push oficiales", icon:"🟨" },
     { key:"total", label:"Picks totales", value:String(totalPicks), caption:`${pendingPicks} pendientes`, icon:"📊" },
     { key:"risk", label:"Riesgo u", value:`${riskedUnits.toFixed(2)}u`, caption:"exposición acumulada", icon:"💼" }
+  ];
+  const earningsCards = [
+    { key:"payout", label:"Ganancia estimada", value:formatMoney(payoutUsd), caption:"pago estimado tipster (90%)" },
+    { key:"gross", label:"Facturación", value:formatMoney(grossUsd), caption:"ventas brutas acumuladas" },
+    { key:"sales", label:"Ventas", value:String(salesCount), caption:`comisión plataforma ${formatMoney(platformFeeUsd)}` }
   ];
 
   function getPickResultMeta(resultValue) {
@@ -5792,6 +5628,22 @@ function TipsterProfileView({ setView, tipsterName, picks }) {
 
         <section style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:12,padding:"14px"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:10}}>
+            <h3 style={{fontFamily:"'Bebas Neue'",fontSize:"1.5rem",letterSpacing:1,margin:0}}>Ganancias <span style={{color:"var(--g)"}}>tipster</span></h3>
+            <span style={{fontSize:"0.7rem",color:"var(--muted)",letterSpacing:1.1,textTransform:"uppercase"}}>{summaryLoading?"actualizando...":"resumen acumulado"}</span>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:10}}>
+            {earningsCards.map((metric)=>(
+              <article key={metric.key} style={{background:"rgba(12,19,16,0.9)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:10,padding:"11px 10px",textAlign:"center"}}>
+                <div style={{fontFamily:"'Bebas Neue'",fontSize:"1.65rem",lineHeight:1,color:"var(--g)"}}>{metric.value}</div>
+                <div style={{fontSize:"0.64rem",color:"var(--text)",letterSpacing:1,textTransform:"uppercase",marginTop:3,fontWeight:700}}>{metric.label}</div>
+                <div style={{fontSize:"0.66rem",color:"var(--muted)",marginTop:4}}>{metric.caption}</div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:12,padding:"14px"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:10}}>
             <h3 style={{fontFamily:"'Bebas Neue'",fontSize:"1.55rem",letterSpacing:1,margin:0}}>Dashboard de <span style={{color:"var(--g)"}}>stats</span></h3>
             <span style={{fontSize:"0.7rem",color:"var(--muted)",letterSpacing:1.1,textTransform:"uppercase"}}>Momio + Push incluidos</span>
           </div>
@@ -5809,10 +5661,14 @@ function TipsterProfileView({ setView, tipsterName, picks }) {
 
         <section>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:6}}>
-            <h3 style={{fontFamily:"'Bebas Neue'",fontSize:"1.6rem",letterSpacing:1,margin:0}}>Picks <span style={{color:"var(--g)"}}>Recientes</span></h3>
-            <span style={{fontSize:"0.72rem",color:"var(--muted)"}}>{recentPicks.length} mostrados</span>
+            <h3 style={{fontFamily:"'Bebas Neue'",fontSize:"1.6rem",letterSpacing:1,margin:0}}>Historial de <span style={{color:"var(--g)"}}>Picks</span></h3>
+            <span style={{fontSize:"0.72rem",color:"var(--muted)"}}>{summaryLoading ? "Cargando..." : `${recentPicks.length} mostrados`}</span>
           </div>
-          {recentPicks.length===0 ? (
+          {summaryLoading && recentPicks.length===0 ? (
+            <div style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:12,padding:"34px 16px",textAlign:"center",color:"var(--muted)"}}>
+              Cargando historial del tipster...
+            </div>
+          ) : recentPicks.length===0 ? (
             <div style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:12,padding:"34px 16px",textAlign:"center",color:"var(--muted)"}}>
               No hay picks disponibles aún para este tipster.
             </div>
