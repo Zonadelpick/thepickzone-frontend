@@ -5785,24 +5785,17 @@ function TipsterProfileView({ setView, tipsterName, picks, user }) {
   const [tipster, setTipster] = useState(null);
   const [tipsterHistory, setTipsterHistory] = useState([]);
   const [tipsterWeeklyCuts, setTipsterWeeklyCuts] = useState(()=>normalizeWeeklyCutsPayload(null));
+  const [tipsterFinanceAccess, setTipsterFinanceAccess] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(false);
-  const viewerRole = String(user?.role || "").trim().toLowerCase();
-  const normalizedViewerName = String(user?.name || "").trim().toLowerCase();
-  const normalizedTipsterName = String(tipsterName || "").trim().toLowerCase();
-  const viewerCanAccessTipsterDashboard = Boolean(
-    normalizedViewerName &&
-    normalizedTipsterName &&
-    normalizedViewerName === normalizedTipsterName &&
-    ["pro", "tipster", "admin"].includes(viewerRole)
-  );
 
   useEffect(()=>{
     let cancelled = false;
     const normalizedName = String(tipsterName || "").trim();
-    if (!normalizedName || !viewerCanAccessTipsterDashboard) {
+    if (!normalizedName) {
       setTipster(null);
       setTipsterHistory([]);
       setTipsterWeeklyCuts(normalizeWeeklyCutsPayload(null));
+      setTipsterFinanceAccess(false);
       setSummaryLoading(false);
       return ()=>{ cancelled = true; };
     }
@@ -5818,6 +5811,7 @@ function TipsterProfileView({ setView, tipsterName, picks, user }) {
           setTipster(summaryData.tipster);
           setTipsterHistory(Array.isArray(summaryData.history) ? summaryData.history : []);
           setTipsterWeeklyCuts(normalizeWeeklyCutsPayload(summaryData?.weeklyCuts));
+          setTipsterFinanceAccess(Boolean(summaryData?.financeAccess));
           return;
         }
         const fallbackResponse = await fetch(BACKEND_URL+"/api/tipsters");
@@ -5826,33 +5820,20 @@ function TipsterProfileView({ setView, tipsterName, picks, user }) {
           const fallbackTipster = fallbackData.find((item)=>String(item?.name || "").trim().toLowerCase()===normalizedName.toLowerCase());
           setTipster(fallbackTipster || null);
           setTipsterWeeklyCuts(normalizeWeeklyCutsPayload(null));
+          setTipsterFinanceAccess(false);
         }
       } catch (_) {
-        if (!cancelled) setTipsterWeeklyCuts(normalizeWeeklyCutsPayload(null));
+        if (!cancelled) {
+          setTipsterWeeklyCuts(normalizeWeeklyCutsPayload(null));
+          setTipsterFinanceAccess(false);
+        }
       } finally {
         if (!cancelled) setSummaryLoading(false);
       }
     }
     loadTipsterSummary();
     return ()=>{ cancelled = true; };
-  },[tipsterName, viewerCanAccessTipsterDashboard]);
-  if (!viewerCanAccessTipsterDashboard) {
-    return (
-      <div className="tpz-page tpz-pro-shell" style={{paddingTop:80,minHeight:"100vh",padding:"clamp(80px,12vw,100px) 5% 60px"}}>
-        <div className="tpz-pro-shell-inner" style={{maxWidth:760}}>
-          <button onClick={()=>setView("rankings")} style={{background:"none",border:"none",color:"var(--g)",cursor:"pointer",fontSize:"0.85rem",marginBottom:12}}>← Volver</button>
-          <div style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:12,padding:"22px 18px"}}>
-            <h2 style={{fontFamily:"'Bebas Neue'",fontSize:"clamp(1.8rem,4.2vw,2.4rem)",lineHeight:1,marginBottom:10}}>
-              Dashboard de tipster <span style={{color:"var(--g)"}}>privado</span>
-            </h2>
-            <p style={{fontSize:"0.86rem",color:"var(--text-dim)",lineHeight:1.65,margin:0}}>
-              Este dashboard solo se muestra al tipster que inició sesión en su propio panel.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  },[tipsterName]);
   const fallbackPicks = picks.filter((pick)=>String(pick?.tipster || "").trim()===String(tipsterName || "").trim());
   const myPicks = tipsterHistory.length>0 ? tipsterHistory : fallbackPicks;
   const recentPicks = [...myPicks]
@@ -5895,6 +5876,7 @@ function TipsterProfileView({ setView, tipsterName, picks, user }) {
   const weeklyHistory = Array.isArray(tipsterWeeklyCuts?.recentWeeks) ? tipsterWeeklyCuts.recentWeeks.slice(0, 8) : [];
   const weeklyTotals = tipsterWeeklyCuts?.totals || {};
   const weeklyStatusMeta = getWeeklyCutStatusMeta(weeklyCurrentCut?.status);
+  const showFinanceSection = Boolean(tipsterFinanceAccess);
   const headlineCards = [
     {
       key: "roi",
@@ -6038,54 +6020,56 @@ function TipsterProfileView({ setView, tipsterName, picks, user }) {
           ))}
         </section>
 
-        <section style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:12,padding:"14px"}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:10}}>
-            <h3 style={{fontFamily:"'Bebas Neue'",fontSize:"1.5rem",letterSpacing:1,margin:0}}>Cortes <span style={{color:"var(--g)"}}>semanales</span></h3>
-            <span style={{fontSize:"0.7rem",color:"var(--muted)",letterSpacing:1.1,textTransform:"uppercase"}}>{summaryLoading?"actualizando...":(weeklyCurrentCut?.label || "semana actual")}</span>
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:10}}>
-            {earningsCards.map((metric)=>(
-              <article key={metric.key} style={{background:"rgba(12,19,16,0.9)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:10,padding:"11px 10px",textAlign:"center"}}>
-                <div style={{fontFamily:"'Bebas Neue'",fontSize:"1.65rem",lineHeight:1,color:"var(--g)"}}>{metric.value}</div>
-                <div style={{fontSize:"0.64rem",color:"var(--text)",letterSpacing:1,textTransform:"uppercase",marginTop:3,fontWeight:700}}>{metric.label}</div>
-                <div style={{fontSize:"0.66rem",color:"var(--muted)",marginTop:4}}>{metric.caption}</div>
-              </article>
-            ))}
-          </div>
-          <div style={{marginTop:10,display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap"}}>
-            <span style={{background:weeklyStatusMeta.bg,color:weeklyStatusMeta.color,border:weeklyStatusMeta.border,padding:"4px 11px",borderRadius:100,fontSize:"0.66rem",fontWeight:800,letterSpacing:1}}>
-              {weeklyStatusMeta.label}
-            </span>
-            <span style={{fontSize:"0.68rem",color:"var(--muted)"}}>
-              Total ventana: {Math.max(0, toSafeNumber(weeklyTotals?.salesCount, 0))} ventas · Gross {formatMoney(weeklyTotals?.grossUsd || 0)}
-            </span>
-          </div>
-          <div style={{marginTop:10,display:"flex",flexDirection:"column",gap:7}}>
-            {weeklyHistory.length===0 ? (
-              <div style={{fontSize:"0.72rem",color:"var(--muted)"}}>No hay cortes semanales disponibles todavía.</div>
-            ) : weeklyHistory.map((weekRow, index)=>{
-              const statusMeta = getWeeklyCutStatusMeta(weekRow?.status);
-              return (
-                <div key={`${weekRow?.label || "week"}-${index}`} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap",background:"rgba(12,19,16,0.9)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:8,padding:"8px 10px"}}>
-                  <div>
-                    <div style={{fontSize:"0.75rem",fontWeight:700}}>{weekRow?.label || "Semana"}</div>
-                    <div style={{fontSize:"0.67rem",color:"var(--text-dim)"}}>
-                      {Math.max(0, toSafeNumber(weekRow?.salesCount, 0))} ventas · Gross {formatMoney(weekRow?.grossUsd || 0)} · Fee {formatMoney(weekRow?.platformFeeUsd || 0)}
+        {showFinanceSection && (
+          <section style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:12,padding:"14px"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:10}}>
+              <h3 style={{fontFamily:"'Bebas Neue'",fontSize:"1.5rem",letterSpacing:1,margin:0}}>Cortes <span style={{color:"var(--g)"}}>semanales</span></h3>
+              <span style={{fontSize:"0.7rem",color:"var(--muted)",letterSpacing:1.1,textTransform:"uppercase"}}>{summaryLoading?"actualizando...":(weeklyCurrentCut?.label || "semana actual")}</span>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:10}}>
+              {earningsCards.map((metric)=>(
+                <article key={metric.key} style={{background:"rgba(12,19,16,0.9)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:10,padding:"11px 10px",textAlign:"center"}}>
+                  <div style={{fontFamily:"'Bebas Neue'",fontSize:"1.65rem",lineHeight:1,color:"var(--g)"}}>{metric.value}</div>
+                  <div style={{fontSize:"0.64rem",color:"var(--text)",letterSpacing:1,textTransform:"uppercase",marginTop:3,fontWeight:700}}>{metric.label}</div>
+                  <div style={{fontSize:"0.66rem",color:"var(--muted)",marginTop:4}}>{metric.caption}</div>
+                </article>
+              ))}
+            </div>
+            <div style={{marginTop:10,display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap"}}>
+              <span style={{background:weeklyStatusMeta.bg,color:weeklyStatusMeta.color,border:weeklyStatusMeta.border,padding:"4px 11px",borderRadius:100,fontSize:"0.66rem",fontWeight:800,letterSpacing:1}}>
+                {weeklyStatusMeta.label}
+              </span>
+              <span style={{fontSize:"0.68rem",color:"var(--muted)"}}>
+                Total ventana: {Math.max(0, toSafeNumber(weeklyTotals?.salesCount, 0))} ventas · Gross {formatMoney(weeklyTotals?.grossUsd || 0)}
+              </span>
+            </div>
+            <div style={{marginTop:10,display:"flex",flexDirection:"column",gap:7}}>
+              {weeklyHistory.length===0 ? (
+                <div style={{fontSize:"0.72rem",color:"var(--muted)"}}>No hay cortes semanales disponibles todavía.</div>
+              ) : weeklyHistory.map((weekRow, index)=>{
+                const statusMeta = getWeeklyCutStatusMeta(weekRow?.status);
+                return (
+                  <div key={`${weekRow?.label || "week"}-${index}`} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap",background:"rgba(12,19,16,0.9)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:8,padding:"8px 10px"}}>
+                    <div>
+                      <div style={{fontSize:"0.75rem",fontWeight:700}}>{weekRow?.label || "Semana"}</div>
+                      <div style={{fontSize:"0.67rem",color:"var(--text-dim)"}}>
+                        {Math.max(0, toSafeNumber(weekRow?.salesCount, 0))} ventas · Gross {formatMoney(weekRow?.grossUsd || 0)} · Fee {formatMoney(weekRow?.platformFeeUsd || 0)}
+                      </div>
+                    </div>
+                    <div style={{display:"flex",alignItems:"center",gap:8}}>
+                      <span style={{background:statusMeta.bg,color:statusMeta.color,border:statusMeta.border,padding:"3px 10px",borderRadius:100,fontSize:"0.62rem",fontWeight:800,letterSpacing:1}}>
+                        {statusMeta.label}
+                      </span>
+                      <span style={{fontFamily:"'Bebas Neue'",fontSize:"1.2rem",lineHeight:1,color:"var(--gold)"}}>
+                        {formatMoney(weekRow?.payoutUsd || 0)}
+                      </span>
                     </div>
                   </div>
-                  <div style={{display:"flex",alignItems:"center",gap:8}}>
-                    <span style={{background:statusMeta.bg,color:statusMeta.color,border:statusMeta.border,padding:"3px 10px",borderRadius:100,fontSize:"0.62rem",fontWeight:800,letterSpacing:1}}>
-                      {statusMeta.label}
-                    </span>
-                    <span style={{fontFamily:"'Bebas Neue'",fontSize:"1.2rem",lineHeight:1,color:"var(--gold)"}}>
-                      {formatMoney(weekRow?.payoutUsd || 0)}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         <section style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:12,padding:"14px"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:10}}>
