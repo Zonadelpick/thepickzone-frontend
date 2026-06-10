@@ -1218,7 +1218,7 @@ function isValidClabe(value) {
 function getPickShareUrl(pick) {
   const pickId = pick?._id || pick?.id;
   if (!pickId) return `${window.location.origin}${window.location.pathname}`;
-  return `${BACKEND_URL}/share/pick/${encodeURIComponent(String(pickId))}`;
+  return `${BACKEND_URL}/share/pick/${encodeURIComponent(String(pickId))}?share=v2`;
 }
 
 function getPickShareText(pick) {
