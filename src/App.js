@@ -2590,8 +2590,11 @@ function PurchaseView({ pick, setView, user }) {
 function RankingsView({ setView, picks, setSelectedTipster }) {
   const [tipsters, setTipsters] = useState([]);
   const [sortBy, setSortBy] = useState("roi");
+  const [rankingsLoading, setRankingsLoading] = useState(true);
+  const [hasFetchedRankings, setHasFetchedRankings] = useState(false);
 
   useEffect(()=>{
+    if (!hasFetchedRankings) setRankingsLoading(true);
     fetch(BACKEND_URL+"/api/tipsters")
       .then(r=>r.json())
       .then(data=>{
@@ -2624,8 +2627,15 @@ function RankingsView({ setView, picks, setSelectedTipster }) {
           });
           setTipsters(t);
         }
-      }).catch(()=>{});
-  },[picks]);
+      })
+      .catch(()=>{})
+      .finally(()=>{
+        if (!hasFetchedRankings) {
+          setHasFetchedRankings(true);
+          setRankingsLoading(false);
+        }
+      });
+  },[picks, hasFetchedRankings]);
 
   function openTipsterProfile(tipster) {
     const tipsterName = String(tipster?.name || "").trim();
@@ -2688,7 +2698,12 @@ function RankingsView({ setView, picks, setSelectedTipster }) {
             </button>
           ))}
         </div>
-        {sorted.length === 0 ? (
+        {!hasFetchedRankings && rankingsLoading ? (
+          <div style={{textAlign:"center",padding:60,color:"var(--muted)",background:"var(--d3)",border:"1px solid var(--border)",borderRadius:12}}>
+            <div style={{fontSize:"3rem",marginBottom:16}}>⏳</div>
+            <div>Cargando rankings...</div>
+          </div>
+        ) : sorted.length === 0 ? (
           <div style={{textAlign:"center",padding:60,color:"var(--muted)",background:"var(--d3)",border:"1px solid var(--border)",borderRadius:12}}>
             <div style={{fontSize:"3rem",marginBottom:16}}>🏆</div>
             <div>No hay tipsters registrados aún</div>
@@ -5988,7 +6003,6 @@ function TipsterProfileView({ setView, tipsterName, picks, user }) {
                 <h2 style={{fontFamily:"'Bebas Neue'",fontSize:"clamp(2rem,4.8vw,3rem)",lineHeight:0.9,letterSpacing:1.2,marginBottom:8}}>{tipsterName}</h2>
                 <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:10}}>
                   <span style={{background:"rgba(29,185,84,0.15)",color:"var(--g)",padding:"4px 12px",borderRadius:100,fontSize:"0.69rem",fontWeight:800,letterSpacing:1.2}}>PRO ⭐ VERIFICADO</span>
-                  <span style={{background:"rgba(245,197,66,0.14)",color:"var(--gold)",padding:"4px 12px",borderRadius:100,fontSize:"0.69rem",fontWeight:800,letterSpacing:1.2}}>MOMIO + PUSH TRACKING</span>
                 </div>
                 <div style={{fontSize:"0.86rem",color:"var(--text-dim)",lineHeight:1.7,maxWidth:620}}>{profileSubtitle}</div>
               </div>
