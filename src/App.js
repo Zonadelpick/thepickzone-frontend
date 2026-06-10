@@ -3340,6 +3340,10 @@ function ProPanelView({ user, addPick, setView, picks }) {
   const [playerName, setPlayerName] = useState("");
   const [propStatType, setPropStatType] = useState("points");
   const [bookmaker, setBookmaker] = useState("");
+  const [matchFetchError, setMatchFetchError] = useState("");
+  const [manualMatchHome, setManualMatchHome] = useState("");
+  const [manualMatchAway, setManualMatchAway] = useState("");
+  const [manualMatchDateTime, setManualMatchDateTime] = useState("");
   const [financeSummary, setFinanceSummary] = useState(()=>normalizeWeeklyCutsPayload(null));
   const [financeLoading, setFinanceLoading] = useState(false);
   const [financeError, setFinanceError] = useState("");
@@ -3539,17 +3543,28 @@ function ProPanelView({ user, addPick, setView, picks }) {
   }
 
   async function fetchMatchesFromSport(leagueObj) {
-    if (!leagueObj?.key) return [];
+    if (!leagueObj?.key) return { matches: [], error: "" };
     try {
       const r = await fetch(BACKEND_URL+"/api/fixtures/odds?sportKey="+encodeURIComponent(leagueObj.key));
-      if(!r.ok) return [];
-      const data = await r.json();
-      if(!Array.isArray(data) || data.length===0) return [];
+      const data = await r.json().catch(()=>null);
+      if(!r.ok){
+        return {
+          matches: [],
+          error: data?.error || `No se pudieron cargar partidos para ${leagueObj?.name || leagueObj?.key}`
+        };
+      }
+      if(!Array.isArray(data) || data.length===0) return { matches: [], error: "" };
       const officialMatches = mapOddsMatchesWithLeague(data, leagueObj);
       const upcomingMatches = officialMatches.filter((m)=>!isMatchStarted(m.timeRaw||m.time));
-      return upcomingMatches.length>0 ? upcomingMatches : officialMatches;
+      return {
+        matches: upcomingMatches.length>0 ? upcomingMatches : officialMatches,
+        error: ""
+      };
     } catch(e) {
-      return [];
+      return {
+        matches: [],
+        error: e?.message || "Error consultando partidos en vivo"
+      };
     }
   }
 
@@ -3557,15 +3572,19 @@ function ProPanelView({ user, addPick, setView, picks }) {
     if(!leagueObj?.key){
       setMatchesContext(null);
       setLiveMatches([]);
+      setMatchFetchError("");
       return;
     }
     setLoadingMatches(true);
     setLiveMatches(null);
     setMatchesContext(null);
+    setMatchFetchError("");
+    const loadErrors = [];
 
-    const primaryMatches = await fetchMatchesFromSport(leagueObj);
-    if (primaryMatches.length > 0) {
-      setLiveMatches(primaryMatches);
+    const primaryResult = await fetchMatchesFromSport(leagueObj);
+    if (primaryResult.error) loadErrors.push(primaryResult.error);
+    if (primaryResult.matches.length > 0) {
+      setLiveMatches(primaryResult.matches);
       setMatchesContext({
         requestedLeagueName: leagueObj?.name || leagueObj?.title || leagueObj?.key,
         requestedLeagueKey: leagueObj?.key,
@@ -3594,9 +3613,10 @@ function ProPanelView({ user, addPick, setView, picks }) {
         flag: "🌍",
         logoUrl: "",
       };
-      const fallbackMatches = await fetchMatchesFromSport(fallbackLeague);
-      if (fallbackMatches.length > 0) {
-        setLiveMatches(fallbackMatches);
+      const fallbackResult = await fetchMatchesFromSport(fallbackLeague);
+      if (fallbackResult.error) loadErrors.push(fallbackResult.error);
+      if (fallbackResult.matches.length > 0) {
+        setLiveMatches(fallbackResult.matches);
         setMatchesContext({
           requestedLeagueName: leagueObj?.name || leagueObj?.title || leagueObj?.key,
           requestedLeagueKey: leagueObj?.key,
@@ -3610,6 +3630,7 @@ function ProPanelView({ user, addPick, setView, picks }) {
     }
 
     setLiveMatches([]);
+    setMatchFetchError(loadErrors[0] || "No fue posible cargar partidos para esta liga en este momento.");
     setMatchesContext({
       requestedLeagueName: leagueObj?.name || leagueObj?.title || leagueObj?.key,
       requestedLeagueKey: leagueObj?.key,
@@ -3649,6 +3670,10 @@ function ProPanelView({ user, addPick, setView, picks }) {
     setPlayerName("");
     setPropStatType("points");
     setBookmaker("");
+    setMatchFetchError("");
+    setManualMatchHome("");
+    setManualMatchAway("");
+    setManualMatchDateTime("");
     setSportsError("");
     setPublishedMeta(null);
   }
@@ -3677,11 +3702,48 @@ function ProPanelView({ user, addPick, setView, picks }) {
     setPlayerName("");
     setPropStatType("points");
     setBookmaker("");
+    setMatchFetchError("");
+    setManualMatchHome("");
+    setManualMatchAway("");
+    setManualMatchDateTime("");
     if (type === "straight") {
       setScreen("straight-league");
       return;
     }
     setScreen("parlay-config");
+  }
+  function continueWithManualMatch() {
+    const home = String(manualMatchHome || "").trim();
+    const away = String(manualMatchAway || "").trim();
+    if (!home || !away) {
+      alert("Ingresa local y visitante");
+      return;
+    }
+    let kickoffIso = "";
+    if (manualMatchDateTime) {
+      const parsed = new Date(manualMatchDateTime);
+      if (!Number.isFinite(parsed.getTime())) {
+        alert("Fecha/hora inválida");
+        return;
+      }
+      kickoffIso = parsed.toISOString();
+    }
+    setMatch({
+      id: `manual-${Date.now()}`,
+      home,
+      away,
+      homeLogo: "",
+      awayLogo: "",
+      timeRaw: kickoffIso || null,
+      time: kickoffIso ? isoToLocal(kickoffIso) : "Hora por confirmar",
+      leagueName: league?.name || "Liga",
+      sportKey: league?.key || null,
+      sport: league?.sport || inferSportEmojiFromOdds(league?.group, league?.key, league?.name),
+      flag: league?.flag || "🌍",
+      logoUrl: league?.logoUrl || "",
+      source: "manual"
+    });
+    setScreen("straight-config");
   }
 
   function toggleParlaySportSelection(sportKey) {
@@ -3767,7 +3829,7 @@ function ProPanelView({ user, addPick, setView, picks }) {
     if(!Number.isFinite(parsedOdds) || parsedOdds <= 1){alert("Ingresa un momio decimal válido");return;}
     if(!Number.isFinite(parsedBank) || parsedBank <= 0 || parsedBank > 100){alert("Ingresa un porcentaje de bank válido (1-100)");return;}
     if(!imgSrc){alert("Carga la imagen del ticket antes de publicar");return;}
-    if(betType==="straight" && (!league || !match)){alert("Selecciona una liga y un partido oficial");return;}
+    if(betType==="straight" && (!league || !match)){alert("Selecciona una liga y un partido");return;}
     if(betType==="straight" && !["moneyline","spread","total","player_prop"].includes(marketType)){alert("Selecciona un mercado válido");return;}
     if(betType==="straight" && (marketType==="moneyline" || marketType==="spread") && !["home","away"].includes(selectionSide)){alert("Selecciona lado local o visitante");return;}
     if(betType==="straight" && (marketType==="total" || marketType==="player_prop") && !["over","under"].includes(selectionSide)){alert("Selecciona Over o Under");return;}
@@ -3872,6 +3934,10 @@ function ProPanelView({ user, addPick, setView, picks }) {
     setMatch(null);
     setLiveMatches(null);
     setMatchesContext(null);
+    setMatchFetchError("");
+    setManualMatchHome("");
+    setManualMatchAway("");
+    setManualMatchDateTime("");
     setScreen("straight-match");
   }
 
@@ -4173,6 +4239,11 @@ function ProPanelView({ user, addPick, setView, picks }) {
             No hay partidos en {matchesContext.requestedLeagueName} ahora mismo. Mostrando partidos reales disponibles de {matchesContext.resolvedLeagueName}.
           </div>
         )}
+        {matchFetchError && (
+          <div style={{background:"rgba(244,67,54,0.1)",border:"1px solid rgba(244,67,54,0.45)",borderRadius:8,padding:"10px 12px",marginBottom:12,fontSize:"0.78rem",color:"#ff7d7d"}}>
+            {matchFetchError}
+          </div>
+        )}
         {loadingMatches ? (
           <div style={{textAlign:"center",padding:40,color:"var(--muted)"}}>Cargando partidos oficiales...</div>
         ) : liveMatches && liveMatches.length>0 ? (
@@ -4199,8 +4270,35 @@ function ProPanelView({ user, addPick, setView, picks }) {
           <div style={{textAlign:"center",color:"var(--muted)",padding:40}}>
             <div style={{fontSize:"2rem",marginBottom:12}}>📭</div>
             <div>No hay partidos disponibles para esta liga</div>
+            <button onClick={()=>setScreen("straight-manual")} style={{marginTop:12,background:"none",border:"1px solid var(--g)",color:"var(--g)",borderRadius:8,padding:"8px 14px",cursor:"pointer",fontSize:"0.75rem",fontWeight:700}}>
+              Capturar partido manual
+            </button>
           </div>
         ) : null}
+      </div>
+    </div>
+  );
+  if(screen==="straight-manual") return (
+    <div className="tpz-page tpz-pro-shell" style={{paddingTop:80,padding:"clamp(80px,12vw,100px) 5% 60px"}}>
+      <div className="tpz-pro-shell-inner" style={{maxWidth:560}}>
+        <button onClick={()=>setScreen("straight-match")} style={{background:"none",border:"none",color:"var(--g)",cursor:"pointer",fontSize:"0.85rem",marginBottom:20}}>← Volver a partidos</button>
+        <div style={{fontSize:"0.68rem",color:"var(--g)",letterSpacing:3,textTransform:"uppercase",fontWeight:700,marginBottom:8}}>Straight · Manual</div>
+        <h2 style={{fontFamily:"'Bebas Neue'",fontSize:"2.4rem",marginBottom:12}}>Captura el partido</h2>
+        <div style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:"12px",marginBottom:12}}>
+          <div style={{fontSize:"0.66rem",color:"var(--muted)",marginBottom:6}}>Local</div>
+          <input type="text" value={manualMatchHome} onChange={(e)=>setManualMatchHome(e.target.value)} placeholder="Equipo local" style={{width:"100%",background:"var(--d4)",border:"1px solid var(--border)",outline:"none",color:"var(--text)",borderRadius:8,padding:"9px 10px",fontWeight:600}} />
+        </div>
+        <div style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:"12px",marginBottom:12}}>
+          <div style={{fontSize:"0.66rem",color:"var(--muted)",marginBottom:6}}>Visitante</div>
+          <input type="text" value={manualMatchAway} onChange={(e)=>setManualMatchAway(e.target.value)} placeholder="Equipo visitante" style={{width:"100%",background:"var(--d4)",border:"1px solid var(--border)",outline:"none",color:"var(--text)",borderRadius:8,padding:"9px 10px",fontWeight:600}} />
+        </div>
+        <div style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:10,padding:"12px",marginBottom:16}}>
+          <div style={{fontSize:"0.66rem",color:"var(--muted)",marginBottom:6}}>Fecha y hora (opcional)</div>
+          <input type="datetime-local" value={manualMatchDateTime} onChange={(e)=>setManualMatchDateTime(e.target.value)} style={{width:"100%",background:"var(--d4)",border:"1px solid var(--border)",outline:"none",color:"var(--text)",borderRadius:8,padding:"9px 10px",fontWeight:600}} />
+        </div>
+        <button onClick={continueWithManualMatch} style={{width:"100%",background:"var(--g)",color:"#000",border:"none",padding:"13px 16px",borderRadius:8,fontFamily:"'Barlow Condensed'",fontSize:"0.95rem",fontWeight:900,letterSpacing:1.3,cursor:"pointer"}}>
+          CONTINUAR A CONFIGURAR PICK
+        </button>
       </div>
     </div>
   );
@@ -5683,25 +5781,38 @@ function RevenueDashboard({ setView }) {
 
 
 // ── TIPSTER PROFILE ───────────────────────────────────────────────────────────
-function TipsterProfileView({ setView, tipsterName, picks }) {
+function TipsterProfileView({ setView, tipsterName, picks, user }) {
   const [tipster, setTipster] = useState(null);
   const [tipsterHistory, setTipsterHistory] = useState([]);
   const [tipsterWeeklyCuts, setTipsterWeeklyCuts] = useState(()=>normalizeWeeklyCutsPayload(null));
   const [summaryLoading, setSummaryLoading] = useState(false);
+  const viewerRole = String(user?.role || "").trim().toLowerCase();
+  const normalizedViewerName = String(user?.name || "").trim().toLowerCase();
+  const normalizedTipsterName = String(tipsterName || "").trim().toLowerCase();
+  const viewerCanAccessTipsterDashboard = Boolean(
+    normalizedViewerName &&
+    normalizedTipsterName &&
+    normalizedViewerName === normalizedTipsterName &&
+    ["pro", "tipster", "admin"].includes(viewerRole)
+  );
 
   useEffect(()=>{
     let cancelled = false;
     const normalizedName = String(tipsterName || "").trim();
-    if (!normalizedName) {
+    if (!normalizedName || !viewerCanAccessTipsterDashboard) {
       setTipster(null);
       setTipsterHistory([]);
       setTipsterWeeklyCuts(normalizeWeeklyCutsPayload(null));
+      setSummaryLoading(false);
       return ()=>{ cancelled = true; };
     }
     async function loadTipsterSummary() {
       setSummaryLoading(true);
       try {
-        const summaryResponse = await fetch(BACKEND_URL+`/api/tipsters/${encodeURIComponent(normalizedName)}/summary`);
+        const token = localStorage.getItem("tpz_token");
+        const summaryResponse = await fetch(BACKEND_URL+`/api/tipsters/${encodeURIComponent(normalizedName)}/summary`, {
+          headers: token ? { "Authorization": "Bearer "+token } : {}
+        });
         const summaryData = await summaryResponse.json().catch(()=>null);
         if (!cancelled && summaryResponse.ok && summaryData?.tipster) {
           setTipster(summaryData.tipster);
@@ -5724,7 +5835,24 @@ function TipsterProfileView({ setView, tipsterName, picks }) {
     }
     loadTipsterSummary();
     return ()=>{ cancelled = true; };
-  },[tipsterName]);
+  },[tipsterName, viewerCanAccessTipsterDashboard]);
+  if (!viewerCanAccessTipsterDashboard) {
+    return (
+      <div className="tpz-page tpz-pro-shell" style={{paddingTop:80,minHeight:"100vh",padding:"clamp(80px,12vw,100px) 5% 60px"}}>
+        <div className="tpz-pro-shell-inner" style={{maxWidth:760}}>
+          <button onClick={()=>setView("rankings")} style={{background:"none",border:"none",color:"var(--g)",cursor:"pointer",fontSize:"0.85rem",marginBottom:12}}>← Volver</button>
+          <div style={{background:"var(--d3)",border:"1px solid var(--border)",borderRadius:12,padding:"22px 18px"}}>
+            <h2 style={{fontFamily:"'Bebas Neue'",fontSize:"clamp(1.8rem,4.2vw,2.4rem)",lineHeight:1,marginBottom:10}}>
+              Dashboard de tipster <span style={{color:"var(--g)"}}>privado</span>
+            </h2>
+            <p style={{fontSize:"0.86rem",color:"var(--text-dim)",lineHeight:1.65,margin:0}}>
+              Este dashboard solo se muestra al tipster que inició sesión en su propio panel.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
   const fallbackPicks = picks.filter((pick)=>String(pick?.tipster || "").trim()===String(tipsterName || "").trim());
   const myPicks = tipsterHistory.length>0 ? tipsterHistory : fallbackPicks;
   const recentPicks = [...myPicks]
@@ -6190,6 +6318,11 @@ export default function App() {
   }
   function openOwnTipsterSummary() {
     const tipsterName = String(user?.name || "").trim();
+    const userRole = String(user?.role || "").trim().toLowerCase();
+    if (!["pro","tipster","admin"].includes(userRole)) {
+      gotoView("profile");
+      return;
+    }
     if (!tipsterName) {
       gotoView("profile");
       return;
@@ -6215,7 +6348,7 @@ export default function App() {
       {view==="pro-panel"        && <ProPanelView    user={user} addPick={addPick} setView={gotoView} picks={picks}/>}
       {view==="admin-panel"      && <AdminPanel      setView={gotoView} user={user} picks={picks}/>}
       {view==="revenue-dashboard"&& <RevenueDashboard setView={gotoView} picks={picks}/>}
-      {view==="tipster-profile"   && <TipsterProfileView setView={gotoView} tipsterName={selectedTipster} picks={picks}/>}
+      {view==="tipster-profile"   && <TipsterProfileView setView={gotoView} tipsterName={selectedTipster} picks={picks} user={user}/>}
       <footer className="tpz-footer" style={{background:"var(--dark)",borderTop:"1px solid var(--border)",padding:"40px 5%",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:20}}>
         <div style={{fontFamily:"'Bebas Neue'",fontSize:"1.2rem",letterSpacing:2,color:"var(--g)"}}>THE PICK ZONE</div>
         <div className="tpz-footer-links" style={{display:"flex",gap:20}}>{["Términos","Privacidad","Soporte"].map(l=><a key={l} href="#" style={{color:"var(--muted)",fontSize:"0.8rem",textDecoration:"none"}}>{l}</a>)}</div>
